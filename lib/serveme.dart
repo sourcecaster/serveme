@@ -27,13 +27,16 @@ abstract class Module {
 }
 
 class ServeMe {
-	ServeMe({String configFile = 'config.yaml',
+	ServeMe({
+		String configFile = 'config.yaml',
 		Map<String, Module> modules = const <String, Module>{},
+		Client Function(WebSocket)? clientFactory,
+		Config Function(String filename)? configFactory,
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
-		Client Function(WebSocket)? clientClassFactory}) : _clientClassFactory = clientClassFactory {
-		_config = Config.load(configFile);
+	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
+		config = Config._instantiate(configFile, factory: configFactory);
 		_modules.addEntries(modules.entries.where((entry) {
-			if (!_config.modules.contains(entry.key)) return false;
+			if (!config.modules.contains(entry.key)) return false;
 			if (entry.value.init == null && entry.value.run == null) {
 				error('Unable to register module ${entry.key}: init() or/and run() must be implemented');
 				return false;
@@ -42,10 +45,11 @@ class ServeMe {
 		}));
 	}
 
-	late final Config _config;
+	late final Config config;
 	final Map<String, Module> _modules = <String, Module>{};
-	final Client Function(WebSocket)? _clientClassFactory;
+	final Client Function(WebSocket)? _clientFactory;
 	final List<Client> _clients = <Client>[];
+	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 
 	Future<void> _initModules() async {
 		log('Initializing modules...');
@@ -56,7 +60,7 @@ class ServeMe {
 			await _modules[name]!.init!();
 			count++;
 		}
-		log('${count} modules are initialized');
+		log('$count modules are initialized');
 	}
 
 	void _runModules() {
@@ -68,25 +72,25 @@ class ServeMe {
 			_modules[name]!.run!();
 			count++;
 		}
-		log('${count} are running');
+		log('$count modules are running');
 	}
 
 	Future<void> _initWebSocketServer() async {
 		HttpServer? httpServer;
-		if (_unixSocketsAvailable && _config.socket != null) {
+		if (_unixSocketsAvailable && config._socket != null) {
 			log('Starting WebSocket server using unix named socket...');
-			final File socketFile = File(_config.socket!);
+			final File socketFile = File(config._socket!);
 			if (socketFile.existsSync()) socketFile.deleteSync(recursive: true);
-			httpServer = await HttpServer.bind(InternetAddress(_config.socket!, type: InternetAddressType.unix), 0);
+			httpServer = await HttpServer.bind(InternetAddress(config._socket!, type: InternetAddressType.unix), 0);
 		}
-		else if (_config.port != null) {
+		else if (config._port != null) {
 			log('Starting WebSocket server using local IP address...');
-			httpServer = await HttpServer.bind(InternetAddress('127.0.0.1', type: InternetAddressType.IPv4), _config.port!);
+			httpServer = await HttpServer.bind(InternetAddress('127.0.0.1', type: InternetAddressType.IPv4), config._port!);
 		}
 		if (httpServer != null) {
 			httpServer.listen((HttpRequest request) async {
-				WebSocket socket = await WebSocketTransformer.upgrade(request);
-				Client client = _clientClassFactory != null ? _clientClassFactory!(socket) : Client(socket);
+				final WebSocket socket = await WebSocketTransformer.upgrade(request);
+				final Client client = _clientFactory != null ? _clientFactory!(socket) : Client(socket);
 				_clients.add(client);
 				socket.listen((dynamic socket) {
 					if (socket is WebSocket) {
@@ -108,9 +112,17 @@ class ServeMe {
 
 	Future<bool> run() async {
 		bool result = false;
+		if (!config._valid) {
+			error('Unable to run server due to invalid configuration');
+			return false;
+		}
 		await runZonedGuarded(
 			() async {
 				try {
+					if (config._mongo != null) {
+						await initMongo();
+						if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(_dbIntegrityDescriptor!);
+					}
 					await _initModules();
 					_runModules();
 					await _initWebSocketServer();

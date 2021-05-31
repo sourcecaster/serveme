@@ -91,7 +91,7 @@ Future<void> _checkData(Map<String, CollectionDescriptor> collections) async {
 	}
 }
 
-Future<void> runMongoIntegrityCheck(Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkMongoIntegrity(Map<String, CollectionDescriptor> collections) async {
 	log('Checking database integrity...');
 	await _checkCollections(collections);
 	await _checkIndexes(collections);

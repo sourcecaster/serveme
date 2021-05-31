@@ -1,22 +1,42 @@
 part of serveme;
 
-late Db db;
-bool _initialized = false;
+class MongoDbConnection {
+	MongoDbConnection._internal(this._db, this._config);
 
-Future<void> initMongo() async {
-	final String connectionString =
-		'mongodb://'
-		'${config.mongo.user != null ? config.mongo.user! + ':' + (config.mongo.password ?? '') + '@' : ''}'
-		'${config.mongo.hosts != null ? config.mongo.hosts!.join(',') : config.mongo.host}'
-		'/${config.mongo.database}'
-		'${config.mongo.replica != null ? '?replicaSet=${config.mongo.replica}' : ''}';
-	db = Db(connectionString);
-	_initialized = true;
-	await db.open();
-}
+	final Db _db;
+	final MongoConfig _config;
 
-Future<void> destroyMongo() async {
-	if (_initialized && db.state == State.OPEN) {
-		await db.close();
+	Future<Db> get db async {
+		if (!_db.isConnected && _db.state != State.OPENING) {
+			error('MongoDB connection is lost, reconnecting...');
+			try {
+				await _db.close();
+				await Future<void>.delayed(const Duration(seconds: 1));
+				await _db.open(secure: _config.secure);
+				log('MongoDB connection is reestablished');
+			}
+			catch (err) {
+				error('Unable to establish MongoDB connection: $err');
+			}
+		}
+		return _db;
+	}
+
+	static Future<MongoDbConnection> connect(MongoConfig config) async {
+		log('Connecting to MongoDB...');
+		final String connectionString =
+			'mongodb://'
+			'${config.user != null ? config.user! + ':' + (config.password ?? '') + '@' : ''}'
+			'${config.hosts != null ? config.hosts!.join(',') : config.host}'
+			'/${config.database}'
+			'${config.replica != null ? '?replicaSet=${config.replica}' : ''}';
+		final Db db = Db(connectionString);
+		await db.open(secure: config.secure);
+		log('MongoDB connection is established');
+		return MongoDbConnection._internal(db, config);
+	}
+
+	Future<void> close() async {
+		if (_db.state == State.OPEN) await _db.close();
 	}
 }
