@@ -46,7 +46,7 @@ class CollectionDescriptor {
 	}
 }
 
-Future<void> _checkCollections(Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkCollections(Db db, Map<String, CollectionDescriptor> collections) async {
 	final List<String?> names = await db.getCollectionNames();
 	for (final String name in collections.keys) {
 		if (names.contains(name)) continue;
@@ -56,7 +56,7 @@ Future<void> _checkCollections(Map<String, CollectionDescriptor> collections) as
 	}
 }
 
-Future<void> _checkIndexes(Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkIndexes(Db db, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.indexes.isEmpty) continue;
@@ -76,7 +76,7 @@ Future<void> _checkIndexes(Map<String, CollectionDescriptor> collections) async 
 	}
 }
 
-Future<void> _checkData(Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkData(Db db, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.documents.isEmpty) continue;
@@ -91,10 +91,10 @@ Future<void> _checkData(Map<String, CollectionDescriptor> collections) async {
 	}
 }
 
-Future<void> _checkMongoIntegrity(Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkMongoIntegrity(Db db, Map<String, CollectionDescriptor> collections) async {
 	log('Checking database integrity...');
-	await _checkCollections(collections);
-	await _checkIndexes(collections);
-	await _checkData(collections);
+	await _checkCollections(db, collections);
+	await _checkIndexes(db, collections);
+	await _checkData(db, collections);
 	log('Database integrity OK');
 }

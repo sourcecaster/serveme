@@ -19,11 +19,17 @@ part 'core/utils.dart';
 final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
 
 abstract class Module {
-	const Module({this.api, this.init, this.run, this.dispose});
-	final Object? api;
-	final Future<void> Function()? init;
-	final void Function()? run;
-	final Future<void> Function()? dispose;
+	late ServeMe server;
+
+	Future<Db> get db {
+		if (server._mongo == null) throw Exception('MongoDB is not initialized');
+		return server._mongo!.db;
+	}
+	Config get config => server.config;
+
+	Future<void> init();
+	void run();
+	Future<void> dispose();
 }
 
 class ServeMe {
@@ -34,45 +40,49 @@ class ServeMe {
 		Config Function(String filename)? configFactory,
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
-		config = Config._instantiate(configFile, factory: configFactory);
-		_modules.addEntries(modules.entries.where((entry) {
-			if (!config.modules.contains(entry.key)) return false;
-			if (entry.value.init == null && entry.value.run == null) {
-				error('Unable to register module ${entry.key}: init() or/and run() must be implemented');
-				return false;
-			}
-			return true;
-		}));
+		_config = Config._instantiate(configFile, factory: configFactory);
+		if (_config != null) {
+			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
+				if (!config.modules.contains(entry.key)) return false;
+				entry.value.server = this;
+				return true;
+			}));
+		}
 	}
 
-	late final Config config;
+	bool _running = false;
+	Config? _config;
+	MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
 	final Client Function(WebSocket)? _clientFactory;
 	final List<Client> _clients = <Client>[];
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 
+	Config get config => _config!;
+
+	Future<void> _initMongoDB() async {
+		if (config._mongo != null) {
+			_mongo = await MongoDbConnection.connect(config._mongo!);
+			if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(_mongo!._db, _dbIntegrityDescriptor!);
+		}
+	}
+
 	Future<void> _initModules() async {
 		log('Initializing modules...');
-		int count = 0;
 		for (final String name in _modules.keys) {
-			if (_modules[name]!.init == null) continue;
 			log('Initializing module: $name');
-			await _modules[name]!.init!();
-			count++;
+			await _modules[name]!.init();
 		}
-		log('$count modules are initialized');
+		log('Modules initialization complete');
 	}
 
 	void _runModules() {
 		log('Running modules...');
-		int count = 0;
 		for (final String name in _modules.keys) {
-			if (_modules[name]!.run == null) continue;
 			log('Running module: $name');
-			_modules[name]!.run!();
-			count++;
+			_modules[name]!.run();
 		}
-		log('$count modules are running');
+		log('All modules are running');
 	}
 
 	Future<void> _initWebSocketServer() async {
@@ -104,29 +114,26 @@ class ServeMe {
 	}
 
 	void broadcast(Uint8List data, {bool Function(Client)? where}) {
-		for (Client client in _clients) {
+		for (final Client client in _clients) {
 			if (where != null && !where(client)) continue;
 			client.send(data);
 		}
 	}
 
 	Future<bool> run() async {
-		bool result = false;
-		if (!config._valid) {
+		if (_running) return false;
+		if (_config == null) {
 			error('Unable to run server due to invalid configuration');
 			return false;
 		}
+		_running = true;
 		await runZonedGuarded(
 			() async {
 				try {
-					if (config._mongo != null) {
-						await initMongo();
-						if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(_dbIntegrityDescriptor!);
-					}
+					await _initMongoDB();
 					await _initModules();
 					_runModules();
 					await _initWebSocketServer();
-					result = true;
 				}
 				catch (err, stack) {
 					await error('Server initialization failed: $err', stack);
@@ -134,7 +141,8 @@ class ServeMe {
 					await dispatchEvent(Event.stop, <String, dynamic>{
 						'code': -1,
 					});
-					// await destroyMongo();
+					if (_mongo != null) await _mongo!.close();
+					_running = false;
 					// await destroyLogger();
 					// exit(-1);
 				}
@@ -144,6 +152,6 @@ class ServeMe {
 				error('UNHANDLED: $err', stack);
 			}
 		);
-		return result;
+		return _running;
 	}
 }

@@ -25,19 +25,11 @@ class MongoConfig {
 
 class Config {
 	Config(String filename) {
-		try {
-			final String yaml = File(filename).readAsStringSync();
-			map = loadYaml(yaml) as YamlMap;
-			_valid = true;
-		}
-		catch (err, stack) {
-			error('Unable to load configuration file "$filename": $err', stack);
-			map = YamlMap();
-		}
+		final String yaml = File(filename).readAsStringSync();
+		_map = loadYaml(yaml) as YamlMap;
 	}
 
-	late final YamlMap map;
-	bool _valid = false;
+	YamlMap _map = YamlMap();
 	MongoConfig? _mongo;
 	String? _socket;
 	int? _port;
@@ -46,12 +38,13 @@ class Config {
 	String _errorLog = 'error.log';
 	final List<String> modules = <String>[];
 
+	YamlMap get map => _map;
 	bool get debug => _debug;
 
-	static Config _instantiate(String filename, {Config Function(String)? factory}) {
-		final Config config = factory != null ? factory(filename) : Config(filename);
-		if (!config._valid) return config;
+	static Config? _instantiate(String filename, {Config Function(String)? factory}) {
+		Config? config;
 		try {
+			config = factory != null ? factory(filename) : Config(filename);
 			if (config.map['mongo'] is YamlMap) {
 				config._mongo = MongoConfig(
 					host: cast<String?>(config.map['mongo']['host']),
@@ -72,7 +65,6 @@ class Config {
 		}
 		catch (err) {
 			error('Unable to load configuration file "$filename": $err');
-			config._valid = false;
 		}
 		return config;
 	}
