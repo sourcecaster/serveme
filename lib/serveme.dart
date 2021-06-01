@@ -26,6 +26,9 @@ abstract class Module {
 		return server._mongo!.db;
 	}
 	Config get config => server.config;
+	Future<void> Function(String, [String]) get log => server._logger.log;
+	Future<void> Function(String, [String]) get debug => server._logger.debug;
+	Future<void> Function(String, [StackTrace?]) get error => server._logger.error;
 
 	Future<void> init();
 	void run();
@@ -41,6 +44,7 @@ class ServeMe {
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		_config = Config._instantiate(configFile, factory: configFactory);
+		_logger = Logger(_config);
 		if (_config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
@@ -51,14 +55,18 @@ class ServeMe {
 	}
 
 	bool _running = false;
-	Config? _config;
-	MongoDbConnection? _mongo;
+	late final Config? _config;
+	late final Logger _logger;
+	late final MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
 	final Client Function(WebSocket)? _clientFactory;
 	final List<Client> _clients = <Client>[];
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 
 	Config get config => _config!;
+	Future<void> Function(String, [String]) get log => _logger.log;
+	Future<void> Function(String, [String]) get debug => _logger.debug;
+	Future<void> Function(String, [StackTrace?]) get error => _logger.error;
 
 	Future<void> _initMongoDB() async {
 		if (config._mongo != null) {
