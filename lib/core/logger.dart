@@ -35,7 +35,7 @@ class Logger {
 		});
 		stdout.write(_clear);
 		print('$color${time.replaceFirst(RegExp('.* '), '')}: $message$_reset');
-		console.update();
+		_server.console.update();
 		if (_debugFile != null) {
 			Future<void> func(void _) => _debugFile!.writeString('$time - $message\n');
 			_debugPromise = _debugPromise.then(func);
@@ -56,7 +56,7 @@ class Logger {
 		});
 		stdout.write(_clear);
 		print('$_red${time.replaceFirst(RegExp('.* '), '')}: $message$_reset');
-		console.update();
+		_server.console.update();
 		if (_errorFile != null) {
 			Future<void> func(void _) => _errorFile!.writeString('$time - $message\n${stack.toString()}\n');
 			_errorPromise = _errorPromise.then(func);

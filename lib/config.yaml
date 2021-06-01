@@ -1,0 +1,58 @@
+# If you want server to accept WebSocket connections you need to specify "socket" or "port"
+# parameter. If both are set then "socket" setting will have higher priority.
+#
+# Note that unix domain sockets are only available on Linux, Android and MacOS.
+
+socket: /tmp/serveme.sock
+port: 8080
+
+# MongoDB connection configuration (optional). If no mongo configuration is provided then server
+# will skip MongoDB initialization step. Note that in this case trying to access db object from
+# modules will cause an exception.
+#
+# If "replica" parameter is set then "host" parameter must be a list:
+#
+# mongo:
+#   host:
+#     - replica1.database.domain
+#     - replica2.database.domain
+#     - replica3.database.domain
+#   replica: replicaSetName
+#   database: dataBaseName
+#
+# User/password can be specified as well (optional):
+#
+# mongo:
+#   host: 127.0.0.1
+#   database: dataBaseName
+#   user: dbUser
+#   password: dbUserPassword
+
+mongo:
+  host: 127.0.0.1
+  database: serveme_test
+
+# Set "debug" parameter to true if you want to show and log all debug messages (see Module.debug()
+# method).
+#
+# If no debug and logs parameters are specified then server will use default configuration:
+#
+# debug: false
+# debug_log: debug.log
+# error_log: error.log
+
+debug: true
+debug_log: debug.log
+error_log: error.log
+
+# Server will initialize and run only modules listed in "modules" parameter:
+#
+# modules:
+#   - some_module_1
+#   - some_module_2
+#   - some_module_3
+#
+# Note that if some module is implemented and passed to ServeMe constructor but not listed in
+# configuration file then it will be ignored.
+
+modules:

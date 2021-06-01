@@ -42,12 +42,13 @@ class ServeMe {
 	}
 
 	bool _running = false;
+	final List<StreamSubscription<ProcessSignal>> _processSignalListeners = <StreamSubscription<ProcessSignal>>[];
 	late final Config config;
 	late final Console console;
 	late final Events _events;
 	late final Logger _logger;
 	late final Scheduler _scheduler;
-	late final MongoDbConnection? _mongo;
+	MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
 	final Client Function(WebSocket)? _clientFactory;
 	final List<Client> _clients = <Client>[];
@@ -64,13 +65,13 @@ class ServeMe {
 	Future<void> Function(String, [StackTrace?]) get error => _logger.error;
 
 	Future<void> _initMongoDB() async {
-		if (config._mongo != null) {
-			_mongo = await MongoDbConnection.connect(config._mongo!, this);
-			if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(this, _dbIntegrityDescriptor!);
-		}
+		if (config._mongo == null) return;
+		_mongo = await MongoDbConnection.connect(config._mongo!, this);
+		if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(this, _dbIntegrityDescriptor!);
 	}
 
 	Future<void> _initModules() async {
+		if (_modules.isEmpty) return;
 		log('Initializing modules...');
 		for (final String name in _modules.keys) {
 			log('Initializing module: $name');
@@ -81,6 +82,7 @@ class ServeMe {
 	}
 
 	void _runModules() {
+		if (_modules.isEmpty) return;
 		log('Running modules...');
 		for (final String name in _modules.keys) {
 			log('Running module: $name');
@@ -146,19 +148,25 @@ class ServeMe {
 
 	Future<bool> run() async {
 		if (_running) return false;
+		log('Server start initiated');
 		_running = true;
 		await runZonedGuarded(
 			() async {
 				try {
-					ProcessSignal.sighup.watch().listen((_) => _shutdown(_, 1));
-					ProcessSignal.sigint.watch().listen((_) {
+					_processSignalListeners.add(ProcessSignal.sighup.watch().listen((_) => _shutdown(_, 1)));
+					_processSignalListeners.add(ProcessSignal.sigint.watch().listen((_) {
 						if (_confirm(ProcessSignal.sigint, 'Press ^C again shortly to stop the server')) _shutdown(_, 2);
-					});
+					}));
 					if (!Platform.isWindows) {
-						ProcessSignal.sigterm.watch().listen((_) => _shutdown(_, 15));
-						ProcessSignal.sigusr1.watch().listen((_) => _shutdown(_, 10));
-						ProcessSignal.sigusr2.watch().listen((_) => _shutdown(_, 12));
+						_processSignalListeners.add(ProcessSignal.sigterm.watch().listen((_) => _shutdown(_, 15)));
+						_processSignalListeners.add(ProcessSignal.sigusr1.watch().listen((_) => _shutdown(_, 10)));
+						_processSignalListeners.add(ProcessSignal.sigusr2.watch().listen((_) => _shutdown(_, 12)));
 					}
+					console.on('stop', (_, __) => _shutdown(ProcessSignal.sigquit, 0),
+						validator: RegExp(r'^$'),
+						usage: 'stop',
+						similar: <String>['exit', 'quit', 'shutdown'],
+					);
 					await _initMongoDB();
 					await _initModules();
 					_runModules();
@@ -186,6 +194,10 @@ class ServeMe {
 			final File socketFile = File(config._socket!);
 			if (socketFile.existsSync()) socketFile.deleteSync(recursive: true);
 		}
+		for (final StreamSubscription<ProcessSignal> listener in _processSignalListeners) {
+			listener.cancel();
+		}
+		_processSignalListeners.clear();
 		_scheduler.dispose();
 		_events.dispose();
 		await _disposeModules();

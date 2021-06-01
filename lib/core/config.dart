@@ -26,10 +26,11 @@ class MongoConfig {
 class Config {
 	Config(String filename) {
 		final String yaml = File(filename).readAsStringSync();
-		_map = loadYaml(yaml) as YamlMap;
+		_map = loadYaml(yaml) as YamlMap?;
+		if (_map == null) throw Exception('"$filename" is not valid YAML file');
 	}
 
-	YamlMap _map = YamlMap();
+	YamlMap? _map = YamlMap();
 	MongoConfig? _mongo;
 	String? _socket;
 	int? _port;
@@ -38,7 +39,7 @@ class Config {
 	String _errorLog = 'error.log';
 	final List<String> modules = <String>[];
 
-	YamlMap get map => _map;
+	YamlMap get map => _map!;
 	bool get debug => _debug;
 
 	static Config _instantiate(String filename, {Config Function(String)? factory}) {

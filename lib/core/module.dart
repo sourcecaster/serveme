@@ -13,6 +13,9 @@ abstract class Module {
 	ModuleState _state = ModuleState.none;
 
 	Config get config => server.config;
+	Events get events => server._events;
+	Scheduler get scheduler => server._scheduler;
+	Console get console => server.console;
 	Future<Db> get db {
 		if (server._mongo == null) throw Exception('MongoDB is not initialized');
 		return server._mongo!.db;

@@ -1,7 +1,5 @@
 part of serveme;
 
-late Console console;
-
 class CommandHandler {
 	CommandHandler({required this.function, this.validator, this.usage});
 
