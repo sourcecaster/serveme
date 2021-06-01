@@ -10,25 +10,30 @@ enum Event {
 	disconnect,
 }
 
-Map<Event, List<Function>> _eventHandlers = <Event, List<Function>>{};
+class Events {
+	Events(this._server);
 
-void addEventHandler(Event event, Function(Map<String, dynamic> details) handler) {
-	if (_eventHandlers[event] == null) _eventHandlers[event] = <Function>[];
-	if (!_eventHandlers[event]!.contains(handler)) _eventHandlers[event]!.add(handler);
-}
+	final ServeMe _server;
+	final Map<Event, List<Function>> _eventHandlers = <Event, List<Function>>{};
 
-void removeEventHandler(Event event, Function(Map<String, dynamic> details) handler) {
-	_eventHandlers[event]?.remove(handler);
-}
+	void listen(Event event, Function(Map<String, dynamic> details) handler) {
+		if (_eventHandlers[event] == null) _eventHandlers[event] = <Function>[];
+		if (!_eventHandlers[event]!.contains(handler)) _eventHandlers[event]!.add(handler);
+	}
 
-Future<void> dispatchEvent(Event event, [Map<String, dynamic> details = const <String, dynamic>{}]) async {
-	if (_eventHandlers[event] != null) {
-		for (final Function handler in _eventHandlers[event]!) {
-			try {
-				await handler(details);
-			}
-			catch (err, stack) {
-				error('Event handler execution error: $err', stack);
+	void remove(Event event, Function(Map<String, dynamic> details) handler) {
+		_eventHandlers[event]?.remove(handler);
+	}
+
+	Future<void> dispatch(Event event, [Map<String, dynamic> details = const <String, dynamic>{}]) async {
+		if (_eventHandlers[event] != null) {
+			for (final Function handler in _eventHandlers[event]!) {
+				try {
+					await handler(details);
+				}
+				catch (err, stack) {
+					_server._logger.error('Event handler execution error: $err', stack);
+				}
 			}
 		}
 	}

@@ -3,7 +3,7 @@ part of serveme;
 enum ModuleState {
 	none,
 	initialized,
-	started,
+	running,
 	disposed,
 }
 

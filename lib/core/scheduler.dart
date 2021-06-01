@@ -24,7 +24,7 @@ class Task {
 			await handler(time);
 		}
 		catch (err, stack) {
-			_scheduler._logger.error('Scheduled task execution error: $err', stack);
+			_scheduler._server._logger.error('Scheduled task execution error: $err', stack);
 		}
 		if (period != null && skip) {
 			while (check(DateTime.now().toUtc())) time = time.add(period!);
@@ -34,11 +34,11 @@ class Task {
 }
 
 class Scheduler {
-	Scheduler(this._logger) {
-		addEventHandler(Event.tick, _process);
+	Scheduler(this._server) {
+		_server._events.listen(Event.tick, _process);
 	}
 
-	final Logger _logger;
+	final ServeMe _server;
 	final List<Task> _tasks = <Task>[];
 
 	void schedule(Task task) {
@@ -58,7 +58,7 @@ class Scheduler {
 	}
 
 	void dispose() {
-		removeEventHandler(Event.tick, _process);
+		_server._events.remove(Event.tick, _process);
 	}
 }
 

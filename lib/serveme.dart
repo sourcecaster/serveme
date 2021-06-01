@@ -28,8 +28,9 @@ class ServeMe {
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);
-		_logger = Logger(config);
-		_scheduler = Scheduler(_logger);
+		_logger = Logger(this);
+		_events = Events(this);
+		_scheduler = Scheduler(this);
 		if (config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
@@ -41,6 +42,7 @@ class ServeMe {
 
 	bool _running = false;
 	late final Config config;
+	late final Events _events;
 	late final Logger _logger;
 	late final Scheduler _scheduler;
 	late final MongoDbConnection? _mongo;
@@ -79,7 +81,7 @@ class ServeMe {
 		for (final String name in _modules.keys) {
 			log('Running module: $name');
 			_modules[name]!.run();
-			_modules[name]!._state = ModuleState.started;
+			_modules[name]!._state = ModuleState.running;
 		}
 		log('All modules are running');
 	}
@@ -114,7 +116,7 @@ class ServeMe {
 						socket.listen(print);
 					}
 				});
-				dispatchEvent(Event.connect, <String, dynamic>{'client': client});
+				_events.dispatch(Event.connect, <String, dynamic>{'client': client});
 			});
 			log('WebSocket server is running on: ${httpServer.address.address} port ${httpServer.port}');
 		}
@@ -141,7 +143,7 @@ class ServeMe {
 				catch (err, stack) {
 					await error('Server initialization failed: $err', stack);
 					await log('Server stopped due to initialization errors');
-					await dispatchEvent(Event.stop, <String, dynamic>{
+					await _events.dispatch(Event.stop, <String, dynamic>{
 						'code': -1,
 					});
 					await _disposeModules();

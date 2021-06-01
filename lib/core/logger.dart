@@ -1,15 +1,15 @@
 part of serveme;
 
 class Logger {
-	Logger(this.config) {
+	Logger(this._server) {
 		try {
-			_debugFile = File(config._debugLog).openSync(mode: FileMode.writeOnlyAppend);
+			_debugFile = File(_server.config._debugLog).openSync(mode: FileMode.writeOnlyAppend);
 		}
 		catch (err) {
 			error('Unable to write debug log file: $err');
 		}
 		try {
-			_errorFile = File(config._errorLog).openSync(mode: FileMode.writeOnlyAppend);
+			_errorFile = File(_server.config._errorLog).openSync(mode: FileMode.writeOnlyAppend);
 		}
 		catch (err) {
 			error('Unable to write error log file: $err');
@@ -21,7 +21,7 @@ class Logger {
 	static const String _green = '\x1b[32m';
 	static const String _clear = '\x1b[999D\x1b[K';
 
-	final Config config;
+	final ServeMe _server;
 	Future<void> _debugPromise = Future<void>.value(null);
 	Future<void> _errorPromise = Future<void>.value(null);
 	RandomAccessFile? _debugFile;
@@ -29,7 +29,7 @@ class Logger {
 
 	Future<void> log(String message, [String color = _green]) async {
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
-		dispatchEvent(Event.log, <String, dynamic>{
+		_server._events.dispatch(Event.log, <String, dynamic>{
 			'time': time,
 			'message': message
 		});
@@ -44,12 +44,12 @@ class Logger {
 	}
 
 	Future<void> debug(String message, [String color = _reset]) async {
-		if (config._debug) await log(message, color);
+		if (_server.config._debug) await log(message, color);
 	}
 
 	Future<void> error(String message, [StackTrace? stack]) async {
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
-		dispatchEvent(Event.error, <String, dynamic>{
+		_server._events.dispatch(Event.error, <String, dynamic>{
 			'time': time,
 			'message': message,
 			'stack': stack,
@@ -62,7 +62,7 @@ class Logger {
 			_errorPromise = _errorPromise.then(func);
 			await _errorPromise;
 		}
-		if (config.debug && _debugFile != null) {
+		if (_server.config.debug && _debugFile != null) {
 			Future<void> func(void _) => _debugFile!.writeString('$time - $message\n');
 			_debugPromise = _debugPromise.then(func);
 			await _debugPromise;
