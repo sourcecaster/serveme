@@ -3,6 +3,7 @@ part of serveme;
 class Task {
 	Task(this.time, this.handler, {this.period, this.skip = false});
 
+	late final Scheduler _scheduler;
 	DateTime time;
 	final Future<void> Function(DateTime time) handler;
 	final Duration? period;
@@ -18,12 +19,12 @@ class Task {
 			time = time.add(period!);
 			if (skip) busy = true;
 		}
-		else unschedule(this);
+		else _scheduler.discard(this);
 		try {
 			await handler(time);
 		}
 		catch (err, stack) {
-			error('Scheduled task execution error: $err', stack);
+			_scheduler._logger.error('Scheduled task execution error: $err', stack);
 		}
 		if (period != null && skip) {
 			while (check(DateTime.now().toUtc())) time = time.add(period!);
@@ -32,23 +33,33 @@ class Task {
 	}
 }
 
-final List<Task> _tasks = <Task>[];
+class Scheduler {
+	Scheduler(this._logger) {
+		addEventHandler(Event.tick, _process);
+	}
 
-void schedule(DateTime time, Future<void> Function(DateTime time) handler, {Duration? period, bool skip = false}) {
-	_tasks.add(Task(time, handler, period: period, skip: skip));
-}
+	final Logger _logger;
+	final List<Task> _tasks = <Task>[];
 
-void unschedule(Task task) {
-	_tasks.remove(task);
-}
+	void schedule(Task task) {
+		task._scheduler = this;
+		if (!_tasks.contains(task)) _tasks.add(task);
+	}
 
-void _process() {
-	final DateTime now = DateTime.now().toUtc();
-	for (int i = _tasks.length - 1; i >= 0; i--) {
-		if (_tasks[i].check(now) && !_tasks[i].busy) _tasks[i].execute();
+	void discard(Task task) {
+		_tasks.remove(task);
+	}
+
+	void _process(dynamic _) {
+		final DateTime now = DateTime.now().toUtc();
+		for (int i = _tasks.length - 1; i >= 0; i--) {
+			if (_tasks[i].check(now) && !_tasks[i].busy) _tasks[i].execute();
+		}
+	}
+
+	void dispose() {
+		removeEventHandler(Event.tick, _process);
 	}
 }
 
-void initScheduler() {
-	addEventHandler(Event.tick, (_) => _process());
-}
+

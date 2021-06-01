@@ -12,28 +12,12 @@ part 'core/console.dart';
 part 'core/events.dart';
 part 'core/integrity.dart';
 part 'core/logger.dart';
+part 'core/module.dart';
 part 'core/mongo.dart';
 part 'core/scheduler.dart';
 part 'core/utils.dart';
 
 final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
-
-abstract class Module {
-	late ServeMe server;
-
-	Config get config => server.config;
-	Future<Db> get db {
-		if (server._mongo == null) throw Exception('MongoDB is not initialized');
-		return server._mongo!.db;
-	}
-	Future<void> Function(String, [String]) get log => server._logger.log;
-	Future<void> Function(String, [String]) get debug => server._logger.debug;
-	Future<void> Function(String, [StackTrace?]) get error => server._logger.error;
-
-	Future<void> init();
-	void run();
-	Future<void> dispose();
-}
 
 class ServeMe {
 	ServeMe({
@@ -45,6 +29,7 @@ class ServeMe {
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);
 		_logger = Logger(config);
+		_scheduler = Scheduler(_logger);
 		if (config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
@@ -57,6 +42,7 @@ class ServeMe {
 	bool _running = false;
 	late final Config config;
 	late final Logger _logger;
+	late final Scheduler _scheduler;
 	late final MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
 	final Client Function(WebSocket)? _clientFactory;
@@ -73,7 +59,7 @@ class ServeMe {
 
 	Future<void> _initMongoDB() async {
 		if (config._mongo != null) {
-			_mongo = await MongoDbConnection.connect(config._mongo!);
+			_mongo = await MongoDbConnection.connect(config._mongo!, this);
 			if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(this, _dbIntegrityDescriptor!);
 		}
 	}
@@ -83,6 +69,7 @@ class ServeMe {
 		for (final String name in _modules.keys) {
 			log('Initializing module: $name');
 			await _modules[name]!.init();
+			_modules[name]!._state = ModuleState.initialized;
 		}
 		log('Modules initialization complete');
 	}
@@ -92,8 +79,17 @@ class ServeMe {
 		for (final String name in _modules.keys) {
 			log('Running module: $name');
 			_modules[name]!.run();
+			_modules[name]!._state = ModuleState.started;
 		}
 		log('All modules are running');
+	}
+
+	Future<void> _disposeModules() async {
+		for (final String name in _modules.keys) {
+			if (_modules[name]!._state == ModuleState.none) continue;
+			await _modules[name]!.dispose();
+			_modules[name]!._state = ModuleState.disposed;
+		}
 	}
 
 	Future<void> _initWebSocketServer() async {
@@ -148,9 +144,11 @@ class ServeMe {
 					await dispatchEvent(Event.stop, <String, dynamic>{
 						'code': -1,
 					});
+					await _disposeModules();
+					_scheduler.dispose();
 					if (_mongo != null) await _mongo!.close();
+					await _logger.dispose();
 					_running = false;
-					// await destroyLogger();
 					// exit(-1);
 				}
 			},
