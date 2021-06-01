@@ -11,6 +11,14 @@ class CommandHandler {
 }
 
 class Console {
+	Console(this._server) {
+		stdin.echoMode = false;
+		stdin.lineMode = false;
+		_listener = stdin.listen(_key);
+	}
+
+	final ServeMe _server;
+	late final StreamSubscription<List<int>> _listener;
 	final Map<String, CommandHandler> handlers = <String, CommandHandler>{};
 	final Map<String, String> similar = <String, String>{};
 	final List<String> history = <String>[''];
@@ -36,24 +44,24 @@ class Console {
 	void process(String line) {
 		line = line.trim();
 		if (line.isEmpty) return;
-		log('> $line', YELLOW);
-		final List<String> args = line.split(RegExp('\\s+'));
+		_server.log('> $line', YELLOW);
+		final List<String> args = line.split(RegExp(r'\s+'));
 		final String command = args[0];
 		final CommandHandler? handler = handlers[command];
 		if (handler != null) {
 			args.removeAt(0);
 			line = args.join(' ');
 			if (args.isNotEmpty && <String>['-h', '--help', '-?', '/?'].contains(args[0])) {
-				if (handler.usage != null) log('Usage: ${handler.usage}', CYAN);
-				else log('No usage info available for: $command', CYAN);
+				if (handler.usage != null) _server.log('Usage: ${handler.usage}', CYAN);
+				else _server.log('No usage info available for: $command', CYAN);
 			}
 			else {
 				final bool valid = handler.validator == null || handler.validator!.hasMatch(line);
 				if (valid) handler.function(line, args);
-				else if (handler.usage != null) log('Usage: ${handler.usage}', CYAN);
+				else if (handler.usage != null) _server.log('Usage: ${handler.usage}', CYAN);
 			}
 		}
-		else log('Unknown command: $command' + (similar[command] != null ? '. Did you mean "${similar[command]}"?' : ''), CYAN);
+		else _server.log('Unknown command: $command' + (similar[command] != null ? '. Did you mean "${similar[command]}"?' : ''), CYAN);
 	}
 
 	void previous() {
@@ -78,7 +86,7 @@ class Console {
 		search = null;
 	}
 
-	void key(List<int> input) {
+	void _key(List<int> input) {
 		if (input[0] == 10 || input[0] == 13) {
 			final String cmd = line;
 			reset();
@@ -139,11 +147,8 @@ class Console {
 		final String lineCapped = line.substring(offset, min(line.length, offset + maxLen));
 		stdout.write('\r> $lineCapped' + ' ' * (maxLen - line.length) + '\r\x1b[${pos - offset + 2}C');
 	}
-}
 
-Future<void> initConsole() async {
-	console = Console();
-	stdin.echoMode = false;
-	stdin.lineMode = false;
-	stdin.listen(console.key);
+	Future<void> dispose() async {
+		await _listener.cancel();
+	}
 }

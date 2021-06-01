@@ -11,8 +11,13 @@ enum Event {
 }
 
 class Events {
-	Events(this._server);
+	Events(this._server) {
+		_timer = Timer.periodic(const Duration(seconds: 1), (_) {
+			dispatch(Event.tick);
+		});
+	}
 
+	late final Timer _timer;
 	final ServeMe _server;
 	final Map<Event, List<Function>> _eventHandlers = <Event, List<Function>>{};
 
@@ -36,5 +41,9 @@ class Events {
 				}
 			}
 		}
+	}
+
+	void dispose() {
+		_timer.cancel();
 	}
 }

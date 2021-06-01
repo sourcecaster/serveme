@@ -28,6 +28,7 @@ class ServeMe {
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);
+		console = Console(this);
 		_logger = Logger(this);
 		_events = Events(this);
 		_scheduler = Scheduler(this);
@@ -42,6 +43,7 @@ class ServeMe {
 
 	bool _running = false;
 	late final Config config;
+	late final Console console;
 	late final Events _events;
 	late final Logger _logger;
 	late final Scheduler _scheduler;
@@ -50,6 +52,8 @@ class ServeMe {
 	final Client Function(WebSocket)? _clientFactory;
 	final List<Client> _clients = <Client>[];
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
+	ProcessSignal? _signalReceived;
+	Timer? _signalTimer;
 
 	Future<Db> get db {
 		if (_mongo == null) throw Exception('MongoDB is not initialized');
@@ -84,6 +88,17 @@ class ServeMe {
 			_modules[name]!._state = ModuleState.running;
 		}
 		log('All modules are running');
+	}
+
+	bool _confirm(ProcessSignal signal, String message) {
+		if (_signalTimer != null && _signalTimer!.isActive) _signalTimer!.cancel();
+		if (signal == _signalReceived) return true;
+		else log(message, CYAN);
+		_signalReceived = signal;
+		_signalTimer = Timer(const Duration(seconds: 2), () {
+			_signalReceived = null;
+		});
+		return false;
 	}
 
 	Future<void> _disposeModules() async {
@@ -135,6 +150,15 @@ class ServeMe {
 		await runZonedGuarded(
 			() async {
 				try {
+					ProcessSignal.sighup.watch().listen((_) => _shutdown(_, 1));
+					ProcessSignal.sigint.watch().listen((_) {
+						if (_confirm(ProcessSignal.sigint, 'Press ^C again shortly to stop the server')) _shutdown(_, 2);
+					});
+					if (!Platform.isWindows) {
+						ProcessSignal.sigterm.watch().listen((_) => _shutdown(_, 15));
+						ProcessSignal.sigusr1.watch().listen((_) => _shutdown(_, 10));
+						ProcessSignal.sigusr2.watch().listen((_) => _shutdown(_, 12));
+					}
 					await _initMongoDB();
 					await _initModules();
 					_runModules();
@@ -142,16 +166,7 @@ class ServeMe {
 				}
 				catch (err, stack) {
 					await error('Server initialization failed: $err', stack);
-					await log('Server stopped due to initialization errors');
-					await _events.dispatch(Event.stop, <String, dynamic>{
-						'code': -1,
-					});
-					await _disposeModules();
-					_scheduler.dispose();
-					if (_mongo != null) await _mongo!.close();
-					await _logger.dispose();
-					_running = false;
-					// exit(-1);
+					await _shutdown(ProcessSignal.sigabrt, 6);
 				}
 			},
 			// Handle all unhandled exceptions in order to prevent application crash
@@ -160,5 +175,23 @@ class ServeMe {
 			}
 		);
 		return _running;
+	}
+
+	Future<void> _shutdown(ProcessSignal event, [int code = 100500]) async {
+		await log('Server stopped: $event');
+		await _events.dispatch(Event.stop, <String, dynamic>{
+			'code': code,
+		});
+		if (_unixSocketsAvailable && config._socket != null) {
+			final File socketFile = File(config._socket!);
+			if (socketFile.existsSync()) socketFile.deleteSync(recursive: true);
+		}
+		_scheduler.dispose();
+		_events.dispose();
+		await _disposeModules();
+		if (_mongo != null) await _mongo!.close();
+		await console.dispose();
+		await _logger.dispose();
+		exit(code);
 	}
 }
