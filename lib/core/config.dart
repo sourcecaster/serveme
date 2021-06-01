@@ -41,8 +41,8 @@ class Config {
 	YamlMap get map => _map;
 	bool get debug => _debug;
 
-	static Config? _instantiate(String filename, {Config Function(String)? factory}) {
-		Config? config;
+	static Config _instantiate(String filename, {Config Function(String)? factory}) {
+		Config config;
 		try {
 			config = factory != null ? factory(filename) : Config(filename);
 			if (config.map['mongo'] is YamlMap) {
@@ -64,7 +64,7 @@ class Config {
 			if (config.map['modules'] is YamlList) config.modules.addAll((config.map['modules'] as YamlList).cast<String>());
 		}
 		catch (err) {
-			error('Unable to load configuration file "$filename": $err');
+			throw Exception('Unable to load configuration file "$filename": $err');
 		}
 		return config;
 	}

@@ -21,11 +21,11 @@ final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Pla
 abstract class Module {
 	late ServeMe server;
 
+	Config get config => server.config;
 	Future<Db> get db {
 		if (server._mongo == null) throw Exception('MongoDB is not initialized');
 		return server._mongo!.db;
 	}
-	Config get config => server.config;
 	Future<void> Function(String, [String]) get log => server._logger.log;
 	Future<void> Function(String, [String]) get debug => server._logger.debug;
 	Future<void> Function(String, [StackTrace?]) get error => server._logger.error;
@@ -43,9 +43,9 @@ class ServeMe {
 		Config Function(String filename)? configFactory,
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
-		_config = Config._instantiate(configFile, factory: configFactory);
-		_logger = Logger(_config);
-		if (_config != null) {
+		config = Config._instantiate(configFile, factory: configFactory);
+		_logger = Logger(config);
+		if (config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
 				entry.value.server = this;
@@ -55,7 +55,7 @@ class ServeMe {
 	}
 
 	bool _running = false;
-	late final Config? _config;
+	late final Config config;
 	late final Logger _logger;
 	late final MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
@@ -63,7 +63,10 @@ class ServeMe {
 	final List<Client> _clients = <Client>[];
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 
-	Config get config => _config!;
+	Future<Db> get db {
+		if (_mongo == null) throw Exception('MongoDB is not initialized');
+		return _mongo!.db;
+	}
 	Future<void> Function(String, [String]) get log => _logger.log;
 	Future<void> Function(String, [String]) get debug => _logger.debug;
 	Future<void> Function(String, [StackTrace?]) get error => _logger.error;
@@ -71,7 +74,7 @@ class ServeMe {
 	Future<void> _initMongoDB() async {
 		if (config._mongo != null) {
 			_mongo = await MongoDbConnection.connect(config._mongo!);
-			if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(_mongo!._db, _dbIntegrityDescriptor!);
+			if (_dbIntegrityDescriptor != null) await _checkMongoIntegrity(this, _dbIntegrityDescriptor!);
 		}
 	}
 
@@ -130,10 +133,6 @@ class ServeMe {
 
 	Future<bool> run() async {
 		if (_running) return false;
-		if (_config == null) {
-			error('Unable to run server due to invalid configuration');
-			return false;
-		}
 		_running = true;
 		await runZonedGuarded(
 			() async {

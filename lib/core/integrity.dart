@@ -46,55 +46,55 @@ class CollectionDescriptor {
 	}
 }
 
-Future<void> _checkCollections(Db db, Map<String, CollectionDescriptor> collections) async {
-	final List<String?> names = await db.getCollectionNames();
+Future<void> _checkCollections(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+	final List<String?> names = await (await server.db).getCollectionNames();
 	for (final String name in collections.keys) {
 		if (names.contains(name)) continue;
-		error('Collection "$name" is missing: fixing...');
-		await db.createCollection(name, createCollectionOptions: collections[name]!._options);
-		log('Collection "$name" is created');
+		server.error('Collection "$name" is missing: fixing...');
+		await (await server.db).createCollection(name, createCollectionOptions: collections[name]!._options);
+		server.log('Collection "$name" is created');
 	}
 }
 
-Future<void> _checkIndexes(Db db, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkIndexes(ServeMe server, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.indexes.isEmpty) continue;
-		final List<Map<String, dynamic>> actualIndexes = await db.collection(name).getIndexes();
+		final List<Map<String, dynamic>> actualIndexes = await (await server.db).collection(name).getIndexes();
 		for (final String indexName in collection.indexes.keys) {
 			final IndexDescriptor index = collection.indexes[indexName]!;
 			final IndexImplementationStatus implementation = index._implementationStatus(indexName, actualIndexes);
 			if (implementation == IndexImplementationStatus.implemented) continue;
-			error('Index "$indexName" is missing for collection "$name": fixing...');
+			server.error('Index "$indexName" is missing for collection "$name": fixing...');
 			if (implementation == IndexImplementationStatus.invalid) {
-				error('Name "$indexName" is used by another index: MANUAL FIX REQUIRED');
+				server.error('Name "$indexName" is used by another index: MANUAL FIX REQUIRED');
 				continue;
 			}
-			await db.collection(name).createIndex(name: indexName, keys: index.key, unique: index.unique, sparse: index.sparse);
-			log('Index "$indexName" is created');
+			await (await server.db).collection(name).createIndex(name: indexName, keys: index.key, unique: index.unique, sparse: index.sparse);
+			server.log('Index "$indexName" is created');
 		}
 	}
 }
 
-Future<void> _checkData(Db db, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkData(ServeMe server, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.documents.isEmpty) continue;
 		for (final Map<String, dynamic> document in collection.documents) {
-			final Map<String, dynamic>? found = await db.collection(name).findOne(<String, dynamic>{'_id': document['_id']});
+			final Map<String, dynamic>? found = await (await server.db).collection(name).findOne(<String, dynamic>{'_id': document['_id']});
 			if (found == null) {
-				error('Mandatory document is missing in collection "$name": fixing...');
-				await db.collection(name).insertOne(document);
-				log('Document ID "${document['_id']}" added');
+				server.error('Mandatory document is missing in collection "$name": fixing...');
+				await (await server.db).collection(name).insertOne(document);
+				server.log('Document ID "${document['_id']}" added');
 			}
 		}
 	}
 }
 
-Future<void> _checkMongoIntegrity(Db db, Map<String, CollectionDescriptor> collections) async {
-	log('Checking database integrity...');
-	await _checkCollections(db, collections);
-	await _checkIndexes(db, collections);
-	await _checkData(db, collections);
-	log('Database integrity OK');
+Future<void> _checkMongoIntegrity(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+	server.log('Checking database integrity...');
+	await _checkCollections(server, collections);
+	await _checkIndexes(server, collections);
+	await _checkData(server, collections);
+	server.log('Database integrity OK');
 }

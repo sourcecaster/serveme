@@ -1,18 +1,15 @@
 part of serveme;
 
 class Logger {
-	Logger(Config? config) {
-		final String debugLogFilename = config?._debugLog ?? 'debug.log';
-		final String errorLogFilename = config?._debugLog ?? 'error.log';
-		if (config != null) _debug = config._debug;
+	Logger(this.config) {
 		try {
-			_debugFile = File(debugLogFilename).openSync(mode: FileMode.writeOnlyAppend);
+			_debugFile = File(config._debugLog).openSync(mode: FileMode.writeOnlyAppend);
 		}
 		catch (err) {
 			error('Unable to write debug log file: $err');
 		}
 		try {
-			_errorFile = File(errorLogFilename).openSync(mode: FileMode.writeOnlyAppend);
+			_errorFile = File(config._errorLog).openSync(mode: FileMode.writeOnlyAppend);
 		}
 		catch (err) {
 			error('Unable to write error log file: $err');
@@ -24,7 +21,7 @@ class Logger {
 	static const String _green = '\x1b[32m';
 	static const String _clear = '\x1b[999D\x1b[K';
 
-	bool _debug = true;
+	final Config config;
 	Future<void> _debugPromise = Future<void>.value(null);
 	Future<void> _errorPromise = Future<void>.value(null);
 	RandomAccessFile? _debugFile;
@@ -47,7 +44,7 @@ class Logger {
 	}
 
 	Future<void> debug(String message, [String color = _reset]) async {
-		if (_debug) await log(message, color);
+		if (config._debug) await log(message, color);
 	}
 
 	Future<void> error(String message, [StackTrace? stack]) async {
@@ -65,7 +62,7 @@ class Logger {
 			_errorPromise = _errorPromise.then(func);
 			await _errorPromise;
 		}
-		if (_debug && _debugFile != null) {
+		if (config.debug && _debugFile != null) {
 			Future<void> func(void _) => _debugFile!.writeString('$time - $message\n');
 			_debugPromise = _debugPromise.then(func);
 			await _debugPromise;
