@@ -7,12 +7,12 @@ import 'dart:typed_data';
 import 'package:mongo_dart/mongo_dart.dart' hide Type;
 import 'package:yaml/yaml.dart';
 part 'classes/client.dart';
+part 'classes/module.dart';
 part 'core/config.dart';
 part 'core/console.dart';
 part 'core/events.dart';
 part 'core/integrity.dart';
 part 'core/logger.dart';
-part 'core/module.dart';
 part 'core/mongo.dart';
 part 'core/scheduler.dart';
 part 'core/utils.dart';
@@ -22,9 +22,9 @@ final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Pla
 class ServeMe {
 	ServeMe({
 		String configFile = 'config.yaml',
-		Map<String, Module> modules = const <String, Module>{},
-		Client Function(WebSocket)? clientFactory,
 		Config Function(String filename)? configFactory,
+		Client Function(WebSocket)? clientFactory,
+		Map<String, Module> modules = const <String, Module>{},
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);

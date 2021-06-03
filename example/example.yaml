@@ -3,6 +3,7 @@
 #
 # Note that unix domain sockets are only available on Linux, Android and MacOS.
 
+port: 8080
 
 # MongoDB connection configuration (optional). If no mongo configuration is provided then server
 # will skip MongoDB initialization step. Note that in this case trying to access db object from
@@ -52,3 +53,10 @@ error_log: error.log
 
 modules:
   - meh
+
+# Since this is example config file we're extending it with our custom data which will be loaded by
+# our own Config class.
+
+meh_messages:
+  alive_notification: MehModule is alive!
+  spam_message: Cheese for everyone!
