@@ -14,7 +14,7 @@ class MehConfig extends Config {
 		spamMessage = map['meh_messages']['spam_message'] as String;
 	}
 
-	late final String aliveNotification;
+	late String aliveNotification; /// Should be final too but we'll modify it.
 	late final String spamMessage;
 }
 
@@ -48,14 +48,17 @@ class MehModule extends Module {
 
 	@override
 	Future<void> init() async {
+		/// Declare tasks for scheduler
 		_periodicShout = Task(DateTime.now(), (DateTime _) async {
 			log(config.aliveNotification);
-		}, period: const Duration(seconds: 2));
+		}, period: const Duration(seconds: 3));
 		_webSocketSpam = Task(DateTime.now(), (DateTime _) async {
 			const Utf8Encoder encoder = Utf8Encoder();
 			final Uint8List bytes = encoder.convert(config.spamMessage);
 			server.broadcast(bytes);
 		}, period: const Duration(seconds: 5));
+
+		/// Once scheduled tasks will be processed until completed or discarded.
 		scheduler.schedule(_periodicShout);
 	}
 
@@ -64,6 +67,23 @@ class MehModule extends Module {
 
 	@override
 	void run() {
+		/// For the sake of example let's add some custom console command.
+		console.on('setMessage',
+			(String line, __) {
+				/// Don't. It is a bad practice to modify config like this.
+				config.aliveNotification = line;
+				log('MehModule message is set to "$line"');
+			},
+			/// Using this regular expression to verify command line is correct.
+			validator: RegExp(r'^.*\S+.*$'), /// At least 1 printable character.
+			/// Message to be used to show command help.
+			usage: 'setMessage <message>',
+			/// These commands will work the same way as setMessage.
+			aliases: <String>['setMsg', 'setNotification'],
+			/// These commands will not be executed but a hint will be given.
+			similar: <String>['set', 'message'],
+		);
+
 		log("MehModule is started. Apparently. Now let's spam them.");
 		scheduler.schedule(_webSocketSpam);
 	}
@@ -85,7 +105,7 @@ class MehModule extends Module {
 
 Future<void> main() async {
 	final ServeMe server = ServeMe(
-		/// Main configuration file extended with our own custom data
+		/// Main configuration file extended with our own custom data.
 		configFile: 'example/example.yaml',
 		/// Tell server to use our own Config class.
 		configFactory: (String filename) => MehConfig(filename),
