@@ -14,7 +14,7 @@ class MehConfig extends Config {
 		spamMessage = map['meh_messages']['spam_message'] as String;
 	}
 
-	late String aliveNotification; /// Should be final too but we'll modify it.
+	late String aliveNotification; /// Should be final but we will modify it.
 	late final String spamMessage;
 }
 
