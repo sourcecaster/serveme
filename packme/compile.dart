@@ -9,6 +9,25 @@ void fatal(String message) {
 	exit(-1);
 }
 
+/// How many bytes required to store.
+
+Map<String, int> sizeOf = <String, int>{
+	'int8': 1,
+	'uint8': 1,
+	'int16': 2,
+	'uint16': 2,
+	'int32': 4,
+	'uint32': 4,
+	'int64': 8,
+	'uint64': 8,
+	'float': 4,
+	'double': 8,
+	'datetime': 8,
+};
+
+/// Converts lower case names with underscore to UpperCamelCase (for classes) or
+/// lowerCamelCase (for class fields).
+
 String validName(String input, {bool firstCapital = false}) {
 	RegExp re = firstCapital ? RegExp(r'^[a-z]|[^a-zA-Z][a-z]') : RegExp(r'[^a-zA-Z\?][a-z]');
 	String result = input.replaceAllMapped(re, (Match match) => match.group(0)!.toUpperCase());
@@ -16,6 +35,8 @@ String validName(String input, {bool firstCapital = false}) {
 	result = result.replaceAll(re, '');
 	return result;
 }
+
+/// This class describes an individual field in PackMeMessage class.
 
 class MessageField {
 	MessageField(this.name, this.type, this.optional, this.array);
@@ -25,8 +46,10 @@ class MessageField {
 	final bool optional;
 	final bool array;
 
+	/// Returns field name including exclamation mark if necessary.
 	String get _name => '$name${optional ? '!' : ''}';
 
+	/// Returns required Dart Type depending on field type.
 	String get _type {
 		switch (type) {
 			case 'int8':
@@ -51,6 +74,7 @@ class MessageField {
 		}
 	}
 
+	/// Returns required pack method depending on field type.
 	String get _pack {
 		switch (type) {
 			case 'int8': return 'packInt8';
@@ -71,13 +95,38 @@ class MessageField {
 		}
 	}
 
+	/// Returns required unpack method depending on field type.
 	String get _unpack => 'un$_pack';
 
+	/// Returns code of class field declaration.
 	String get declaration {
 		if (!array) return '${optional ? '' : 'late '}$_type${optional ? '?' : ''} $name;';
 		else return '${optional ? '' : 'late '}List<$_type>${optional ? '?' : ''} $name;';
 	}
 
+	/// Returns code required to estimate size in bytes of this field.
+	List<String> get estimate {
+		final List<String> code = <String>[];
+		if (optional) code.add('		flag($name != null);');
+		if (optional) code.add('		if ($name != null) {');
+		if (!array) {
+			if (type is String && type != 'string') code.add('		${optional ? '	' : ''}bytes += ${sizeOf[type]};');
+			else if (type == 'string') code.add('		${optional ? '	' : ''}bytes += stringBytes($_name);');
+			else if (type is Message) code.add('		${optional ? '	' : ''}bytes += $_name.estimate();');
+			else throw Exception('Wrong type "$type" for field "$name"');
+		}
+		else {
+			code.add('		${optional ? '	' : ''}bytes += 4;');
+			if (type is String && type != 'string') code.add('		${optional ? '	' : ''}bytes += ${sizeOf[type]} * $_name.length;');
+			else if (type == 'string') code.add('		${optional ? '	' : ''}for (int i = 0; i < $_name.length; i++) bytes += stringBytes($_name[i]);');
+			else if (type is Message) code.add('		${optional ? '	' : ''}for (int i = 0; i < $_name.length; i++) bytes += $_name[i].estimate();');
+			else throw Exception('Wrong type "$type" for field "$name"');
+		}
+		if (optional) code.add('		}');
+		return code;
+	}
+
+	/// Returns code required to pack this field.
 	List<String> get pack {
 		final List<String> code = <String>[];
 		if (!array) {
@@ -92,6 +141,7 @@ class MessageField {
 		return code;
 	}
 
+	/// Returns code required to unpack this field.
 	List<String> get unpack {
 		final List<String> code = <String>[];
 		final String ending = type is Message ? '(${type.name}()) as ${type.name}' : '()';
@@ -108,17 +158,26 @@ class MessageField {
 	}
 }
 
-class Message {
-	Message(this.name, this.manifest);
+/// This class describes PackMeMessage class (like request classes, response
+/// classes or nested data classes).
 
+class Message {
+	Message(this.name, this.manifest, {this.id});
+
+	final int? id;
 	final String name;
 	final Map<String, dynamic> manifest;
 
 	final List<String> code = <String>[];
 	final List<Message> nested = <Message>[];
 
+	/// Generate Message class code lines.
 	void parse() {
 		final Map<String, MessageField> fields = <String, MessageField>{};
+		/// We need to estimate class data size in order to create buffer.
+		int bufferSize = 0;
+		/// Only optional fields require existence flags (bits).
+		int optionalCount = 0;
 		for (final MapEntry<String, dynamic> entry in manifest.entries) {
 			final String fieldName = validName(entry.key);
 			if (fieldName.isEmpty) throw Exception('Field name declaration "${entry.key}" is invalid for "$name"');
@@ -133,12 +192,29 @@ class Message {
 				nested.add(value = Message('$name$postfix', value as Map<String, dynamic>));
 			}
 			fields[fieldName] = MessageField(fieldName, value, optional, array);
+			if (optional) optionalCount++;
+			if (!optional && !array && value is String && value != 'string') bufferSize += sizeOf[value]!;
 		}
+		/// Add required bytes to store field existence flags.
+		bufferSize += (optionalCount / 8).ceil();
+		/// Add 4 bytes for command ID
+		if (id != null) bufferSize += 4;
 		code.add('class $name extends PackMeMessage {');
 		for (final MessageField field in fields.values) code.add('	${field.declaration}');
 		code.add('	');
 		code.add('	@override');
+		code.add('	int estimate() {');
+		code.add('		flags.clear();');
+		code.add('		int bytes = $bufferSize;');
+		for (final MessageField field in fields.values) if (field.optional || field.array || field.type == 'string') code.addAll(field.estimate);
+		code.add('		return bytes;');
+		code.add('	}');
+		code.add('	');
+		code.add('	@override');
 		code.add('	void pack() {');
+		code.add('		data ??= Uint8List(estimate());');
+		if (id != null) code.add('		packUint32($id);');
+		code.add('		flags.forEach(packUint8);');
 		for (final MessageField field in fields.values) code.addAll(field.pack);
 		code.add('	}');
 		code.add('	');
@@ -151,6 +227,7 @@ class Message {
 		code.add('');
 	}
 
+	/// Return resulting code for current Message class and all nested ones.
 	List<String> output() {
 		final List<String> result = <String>[];
 		parse();
@@ -184,13 +261,14 @@ void parseCommands(Map<String, dynamic> node) {
 		if (messages[hashResponse] != null) {
 			throw Exception('Message name "$commandNameResponse" is duplicated. Or hash code turned out to be the same as for "${messages[hashResponse]!.name}".');
 		}
-		messages[hashRequest] = Message(commandNameRequest, entry.value[0] as Map<String, dynamic>);
-		messages[hashResponse] = Message(commandNameResponse, entry.value[1] as Map<String, dynamic>);
+		messages[hashRequest] = Message(commandNameRequest, entry.value[0] as Map<String, dynamic>, id: hashRequest);
+		messages[hashResponse] = Message(commandNameResponse, entry.value[1] as Map<String, dynamic>, id: hashResponse);
 	}
 }
 
 void writeOutput() {
 	final List<String> out = <String>[];
+	out.add("import 'dart:typed_data';");
 	out.add("import 'package:serveme/core/packme.dart';");
 	out.add('');
 	for (final Message message in messages.values) {

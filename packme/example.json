@@ -2,10 +2,17 @@
 	"test": [
 		{
 			"a": "uint8",
+			"?maybe": "string",
 			"b": "uint16",
 			"c": "uint32",
 			"str": "string",
-			"arr": ["uint16"]
+			"?obj": {
+				"p1": "string",
+				"p2": "uint64",
+				"?p_opt": ["string"],
+				"p3": "datetime"
+			},
+			"arr": ["uint8"]
 		},
 		{}
 	],
