@@ -1,0 +1,61 @@
+{
+	"get_all": [
+		{},
+		{
+			"users": [{
+				"id": ["uint8"],
+				"nickname": "string",
+				"?first_name": "string",
+				"?second_name": "string",
+				"?age": "uint8"
+			}]
+		}
+	],
+	"get": [
+		{
+			"user_id": ["uint8"]
+		},
+		{
+			"email": "string",
+			"nickname": "string",
+			"hidden": "bool",
+			"created": "datetime",
+			"info": {
+				"?first_name": "string",
+				"?second_name": "string",
+				"?male": "uint8",
+				"?age": "uint8",
+				"?birth_date": "datetime"
+			},
+			"social": {
+				"?facebook_id": "string",
+				"?twitter_id": "string",
+				"?instagram_id": "string"
+			},
+			"stats": {
+				"posts": "uint32",
+				"comments": "uint32",
+				"likes": "uint32",
+				"dislikes": "uint32",
+				"rating": "float"
+			},
+			"?last_active": {
+				"datetime": "datetime",
+				"ip": "string"
+			},
+			"sessions": [{
+				"created": "datetime",
+				"ip": "string",
+				"active": "bool"
+			}]
+		}
+	],
+	"delete": [
+		{
+			"user_id": ["uint8"]
+		},
+		{
+			"?error": "string"
+		}
+	]
+}

@@ -1,0 +1,57 @@
+{
+	"get_all": [
+		{},
+		{
+			"posts": [{
+				"id": ["uint8"],
+				"author": {
+					"id": ["uint8"],
+					"nickname": "string",
+					"avatar": "string"
+				},
+				"title": "string",
+				"short_content": "string",
+				"posted": "datetime"
+			}]
+		}
+	],
+	"get": [
+		{
+			"post_id": ["uint8"]
+		},
+		{
+			"title": "string",
+			"content": "string",
+			"posted": "datetime",
+			"author": {
+				"id": ["uint8"],
+				"nickname": "string",
+				"avatar": "string",
+				"?facebook_id": "string",
+				"?twitter_id": "string",
+				"?instagram_id": "string"
+			},
+			"stats": {
+				"likes": "uint32",
+				"dislikes": "uint32"
+			},
+			"comments": [{
+				"author": {
+					"id": ["uint8"],
+					"nickname": "string",
+					"avatar": "string"
+				},
+				"comment": "string",
+				"posted": "datetime"
+			}]
+		}
+	],
+	"delete": [
+		{
+			"post_id": ["uint8"]
+		},
+		{
+			"?error": "string"
+		}
+	]
+}

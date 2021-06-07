@@ -12,6 +12,7 @@ void fatal(String message) {
 /// How many bytes required to store.
 
 Map<String, int> sizeOf = <String, int>{
+	'bool': 1,
 	'int8': 1,
 	'uint8': 1,
 	'int16': 2,
@@ -52,6 +53,8 @@ class MessageField {
 	/// Returns required Dart Type depending on field type.
 	String get _type {
 		switch (type) {
+			case 'bool':
+				return 'bool';
 			case 'int8':
 			case 'uint8':
 			case 'int16':
@@ -77,6 +80,7 @@ class MessageField {
 	/// Returns required pack method depending on field type.
 	String get _pack {
 		switch (type) {
+			case 'bool': return 'packBool';
 			case 'int8': return 'packInt8';
 			case 'uint8': return 'packUint8';
 			case 'int16': return 'packInt16';
@@ -255,37 +259,37 @@ class Message {
 	}
 }
 
+final Map<int, Message> allMessages = <int, Message>{};
 final Map<int, Message> messages = <int, Message>{};
-late final String outputFilename;
 
-void parseCommands(Map<String, dynamic> node) {
+void parseCommands(Map<String, dynamic> node, String prefix) {
 	for (final MapEntry<String, dynamic> entry in node.entries) {
 		final String commandName = validName(entry.key, firstCapital: true);
 		final String commandNameRequest = '${commandName}Request';
 		final String commandNameResponse = '${commandName}Response';
-		final int hashRequest = commandNameRequest.hashCode;
-		final int hashResponse = commandNameResponse.hashCode;
+		final int hashRequest = '$prefix$commandNameRequest'.hashCode;
+		final int hashResponse = '$prefix$commandNameResponse'.hashCode;
 		if (commandName.isEmpty) {
 			throw Exception('Command name must be adequate :) "${entry.key}" is not.');
 		}
 		if (entry.value is! List || entry.value.length != 2 || entry.value[0] is! Map || entry.value[1] is! Map) {
 			throw Exception('Command "$commandName" declaration is invalid. Must be two objects (request and response) in array.');
 		}
-		if (messages[hashRequest] != null) {
-			throw Exception('Message name "$commandNameRequest" is duplicated. Or hash code turned out to be the same as for "${messages[hashRequest]!.name}".');
+		if (allMessages[hashRequest] != null) {
+			throw Exception('Message name "$commandNameRequest" is duplicated. Or hash code turned out to be the same as for "${allMessages[hashRequest]!.name}".');
 		}
-		if (messages[hashResponse] != null) {
-			throw Exception('Message name "$commandNameResponse" is duplicated. Or hash code turned out to be the same as for "${messages[hashResponse]!.name}".');
+		if (allMessages[hashResponse] != null) {
+			throw Exception('Message name "$commandNameResponse" is duplicated. Or hash code turned out to be the same as for "${allMessages[hashResponse]!.name}".');
 		}
-		messages[hashRequest] = Message(commandNameRequest, entry.value[0] as Map<String, dynamic>, id: hashRequest);
-		messages[hashResponse] = Message(commandNameResponse, entry.value[1] as Map<String, dynamic>, id: hashResponse);
+		allMessages[hashRequest] = messages[hashRequest] = Message(commandNameRequest, entry.value[0] as Map<String, dynamic>, id: hashRequest);
+		allMessages[hashResponse] = messages[hashResponse] = Message(commandNameResponse, entry.value[1] as Map<String, dynamic>, id: hashResponse);
 	}
 }
 
-void writeOutput() {
+void writeOutput(String outputFilename) {
 	final List<String> out = <String>[];
 	out.add("import 'dart:typed_data';");
-	out.add("import 'package:serveme/core/packme.dart';");
+	out.add("import 'package:serveme/serveme.dart';");
 	out.add('');
 	for (final Message message in messages.values) {
 		out.addAll(message.output());
@@ -299,33 +303,41 @@ void writeOutput() {
 }
 
 void main(List<String> args) {
-	if (args.isEmpty) fatal('Manifest filename is missing.');
-	outputFilename = 'example/generated/example.generated.dart';
-	late final String json;
-	try {
-		json = File(args[0]).readAsStringSync();
-	}
-	catch (err) {
-		fatal('Unable to open manifest file: $err');
-	}
-	const JsonDecoder decoder = JsonDecoder();
-	late final Map<String, dynamic> manifest;
-	try {
-		manifest = decoder.convert(json) as Map<String, dynamic>;
-	}
-	catch (err) {
-		fatal('Unable to parse JSON: $err');
-	}
-	try {
-		parseCommands(manifest);
-	}
-	catch (err) {
-		fatal('An error occurred while processing manifest: $err');
-	}
-	try {
-		writeOutput();
-	}
-	catch (err) {
-		fatal('An error occurred while writing output file: $err');
+	final String dirPath = Directory.current.path + (args.isEmpty ? '' : '/${args[0]}');
+	final String outPath = Directory.current.path + (args.length < 2 ? '' : '/${args[1]}');
+	final List<FileSystemEntity> files = Directory(dirPath).listSync();
+	final RegExp reJson = RegExp(r'\.json$');
+	final RegExp reName = RegExp(r'.+[\/\\](.+?)\.json$');
+	for (final FileSystemEntity file in files) {
+		if (!reJson.hasMatch(file.path)) continue;
+		final String name = reName.firstMatch(file.path)!.group(1)!;
+		late String json;
+		try {
+			json = File(file.path).readAsStringSync();
+		}
+		catch (err) {
+			fatal('Unable to open manifest file: $err');
+		}
+		const JsonDecoder decoder = JsonDecoder();
+		late final Map<String, dynamic> manifest;
+		try {
+			manifest = decoder.convert(json) as Map<String, dynamic>;
+		}
+		catch (err) {
+			fatal('Unable to parse JSON: $err');
+		}
+		try {
+			messages.clear();
+			parseCommands(manifest, name);
+		}
+		catch (err) {
+			fatal('An error occurred while processing manifest: $err');
+		}
+		try {
+			writeOutput('$outPath/$name.generated.dart');
+		}
+		catch (err) {
+			fatal('An error occurred while writing output file: $err');
+		}
 	}
 }

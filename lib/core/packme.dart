@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'dart:typed_data';
+part of serveme;
 
 const Utf8Codec _utf8 = Utf8Codec();
 
@@ -45,6 +44,10 @@ abstract class PackMeMessage {
 		return message;
 	}
 
+	void packBool(bool value) {
+		data!.buffer.asByteData().setUint8(offset, value ? 1 : 0);
+		offset++;
+	}
 	void packInt8(int value) {
 		data!.buffer.asByteData().setInt8(offset, value);
 		offset++;
@@ -98,6 +101,11 @@ abstract class PackMeMessage {
 		}
 	}
 
+	bool unpackBool() {
+		final int value = data!.buffer.asByteData().getUint8(offset);
+		offset++;
+		return value == 1;
+	}
 	int unpackInt8() {
 		final int value = data!.buffer.asByteData().getInt8(offset);
 		offset++;

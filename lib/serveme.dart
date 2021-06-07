@@ -1,6 +1,7 @@
 library serveme;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -8,12 +9,13 @@ import 'package:mongo_dart/mongo_dart.dart' hide Type;
 import 'package:yaml/yaml.dart';
 part 'classes/client.dart';
 part 'classes/module.dart';
-part 'core/config.dart';
+part 'classes/config.dart';
 part 'core/console.dart';
 part 'core/events.dart';
 part 'core/integrity.dart';
 part 'core/logger.dart';
 part 'core/mongo.dart';
+part 'core/packme.dart';
 part 'core/scheduler.dart';
 part 'core/utils.dart';
 
