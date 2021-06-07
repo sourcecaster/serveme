@@ -90,12 +90,13 @@ class MehModule extends Module {
 
 	@override
 	Future<void> init() async {
-		/// Declare tasks for scheduler
+		/// Declare tasks for scheduler.
 		_periodicShout = Task(DateTime.now(), (DateTime _) async {
 			log(config.aliveNotification, CYAN);
 		}, period: const Duration(seconds: 3));
+		/// This task will spam all connected WebSocket clients.
 		_webSocketSpam = Task(DateTime.now(), (DateTime _) async {
-			/// We can pass PackMeMessage instance, Uint8List or String
+			/// We can pass PackMeMessage instance, Uint8List or String.
 			server.broadcast(config.spamMessage);
 		}, period: const Duration(seconds: 5));
 
@@ -138,6 +139,8 @@ class MehModule extends Module {
 
 		/// Now let's add console command which will broadcast some message.
 		console.on('sendPackedMessage', (_, __) {
+			/// GetResponse is just the name of response message of command Get.
+			/// It's declared in example-users.generated.dart.
 			final GetResponse message = GetResponse()
 				..email = '${randomString()}@${randomString()}.com'
 				..nickname = 'Mr. ${randomString()}'
@@ -168,10 +171,10 @@ class MehModule extends Module {
 			log('Now waiting for echo response from client...', MAGENTA);
 		});
 
-		/// And finally we will start listening messages from clients
+		/// And finally we will start listening for messages from clients.
 		events.listen(Event.connect, onConnectListener = (Map<String, dynamic> details) {
 			final Client client = details['client'] as Client;
-			/// listen to GetResponse message only
+			/// Listen to GetResponse message only.
 			client.listen<GetResponse>((GetResponse data) {
 				log('Got response, decoded message:', MAGENTA);
 				messageToStrings(data).forEach(log);
