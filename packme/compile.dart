@@ -249,7 +249,7 @@ class Message {
 		code.add('	');
 		code.add('	@override');
 		code.add('	int estimate() {');
-		code.add('		flags.clear();');
+		code.add('		reset();');
 		code.add('		int bytes = $bufferSize;');
 		for (final MessageField field in fields.values) {
 			if (field.optional || field.array || field.type == 'string' || field.type is Message) code.addAll(field.estimate);

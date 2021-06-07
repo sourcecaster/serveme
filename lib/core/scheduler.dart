@@ -58,7 +58,7 @@ class Scheduler {
 	}
 
 	void dispose() {
-		_server._events.remove(Event.tick, _process);
+		_server._events.cancel(Event.tick, _process);
 	}
 }
 

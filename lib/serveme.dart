@@ -149,13 +149,14 @@ class ServeMe {
 	}
 
 	void broadcast(dynamic data, {bool Function(Client)? where}) {
-		if (data is! PackMeMessage && data is! Uint8List && data is! String) {
-			error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
-			return;
-		}
+		Uint8List? bytes;
+		if (data is PackMeMessage) bytes = _packMe.pack(data);
+		else if (data is Uint8List) bytes = data;
+		else if (data is String) bytes = const Utf8Encoder().convert(data);
+		else error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
 		for (final Client client in _clients) {
 			if (where != null && !where(client)) continue;
-			client.send(data);
+			if (bytes != null) client.socket.add(bytes);
 		}
 	}
 

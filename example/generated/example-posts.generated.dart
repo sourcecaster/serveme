@@ -5,7 +5,7 @@ class GetAllRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		return bytes;
 	}
@@ -30,7 +30,7 @@ class GetAllResponsePostAuthor extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 0;
 		bytes += 4;
 		bytes += 1 * id.length;
@@ -69,7 +69,7 @@ class GetAllResponsePost extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 8;
 		bytes += 4;
 		bytes += 1 * id.length;
@@ -109,7 +109,7 @@ class GetAllResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		for (int i = 0; i < posts.length; i++) bytes += posts[i].estimate();
@@ -141,7 +141,7 @@ class GetRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		bytes += 1 * postId.length;
@@ -178,7 +178,7 @@ class GetResponseAuthor extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 1;
 		bytes += 4;
 		bytes += 1 * id.length;
@@ -240,7 +240,7 @@ class GetResponseStats extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 8;
 		return bytes;
 	}
@@ -266,7 +266,7 @@ class GetResponseCommentAuthor extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 0;
 		bytes += 4;
 		bytes += 1 * id.length;
@@ -303,7 +303,7 @@ class GetResponseComment extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 8;
 		bytes += author.estimate();
 		bytes += stringBytes(comment);
@@ -336,7 +336,7 @@ class GetResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 12;
 		bytes += stringBytes(title);
 		bytes += stringBytes(content);
@@ -382,7 +382,7 @@ class DeleteRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		bytes += 1 * postId.length;
@@ -414,7 +414,7 @@ class DeleteResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 5;
 		setFlag(error != null);
 		if (error != null) {

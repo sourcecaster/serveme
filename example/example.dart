@@ -77,6 +77,7 @@ class MehClient extends Client {
 class MehModule extends Module {
 	late Task _periodicShout;
 	late Task _webSocketSpam;
+	Function(Map<String, dynamic>)? onConnectListener;
 
 	/// Since we're using custom Config class then we better override it a bit
 	/// just to make sure it returns MehConfig, not default Config.
@@ -161,11 +162,16 @@ class MehModule extends Module {
 
 				)
 				..sessions = <GetResponseSession>[];
-			server.broadcast('well?');
 			server.broadcast(message);
 			log('Here is the message I sent:', MAGENTA);
 			messageToStrings(message).forEach(log);
 			log('Now waiting for echo response from client...', MAGENTA);
+		});
+
+		/// And finally we will start listening messages fom clients
+		events.listen(Event.connect, onConnectListener = (Map<String, dynamic> details) {
+			final Client client = details['client'] as Client;
+			client.listen<GetResponse>((dynamic data) => print(data));
 		});
 
 		log("MehModule is started. Apparently. Now let's spam them all.", MAGENTA);
@@ -178,6 +184,7 @@ class MehModule extends Module {
 
 	@override
 	Future<void> dispose() async {
+		if (onConnectListener != null) events.cancel(Event.connect, onConnectListener!);
 		scheduler.discard(_periodicShout);
 		scheduler.discard(_webSocketSpam);
 	}

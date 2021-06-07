@@ -26,7 +26,7 @@ class Events {
 		if (!_eventHandlers[event]!.contains(handler)) _eventHandlers[event]!.add(handler);
 	}
 
-	void remove(Event event, Function(Map<String, dynamic> details) handler) {
+	void cancel(Event event, Function(Map<String, dynamic> details) handler) {
 		_eventHandlers[event]?.remove(handler);
 	}
 

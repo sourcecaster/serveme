@@ -12,6 +12,12 @@ abstract class PackMeMessage {
 	void pack();
 	void unpack();
 
+	void reset() {
+		data = null;
+		offset = 0;
+		flags.clear();
+		_bitNumber = 0;
+	}
 	void setFlag(bool on) {
 		final int index = _bitNumber ~/ 8;
 		if (index >= flags.length) flags.add(0);

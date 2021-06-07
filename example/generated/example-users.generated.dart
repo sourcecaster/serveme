@@ -5,7 +5,7 @@ class GetAllRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		return bytes;
 	}
@@ -32,7 +32,7 @@ class GetAllResponseUser extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 1;
 		bytes += 4;
 		bytes += 1 * id.length;
@@ -90,7 +90,7 @@ class GetAllResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		for (int i = 0; i < users.length; i++) bytes += users[i].estimate();
@@ -122,7 +122,7 @@ class GetRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		bytes += 1 * userId.length;
@@ -158,7 +158,7 @@ class GetResponseInfo extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 1;
 		setFlag(firstName != null);
 		if (firstName != null) {
@@ -222,7 +222,7 @@ class GetResponseSocial extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 1;
 		setFlag(facebookId != null);
 		if (facebookId != null) {
@@ -272,7 +272,7 @@ class GetResponseStats extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 20;
 		return bytes;
 	}
@@ -303,7 +303,7 @@ class GetResponseLastActive extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 8;
 		bytes += stringBytes(ip);
 		return bytes;
@@ -330,7 +330,7 @@ class GetResponseSession extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 9;
 		bytes += stringBytes(ip);
 		return bytes;
@@ -365,7 +365,7 @@ class GetResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 14;
 		bytes += stringBytes(email);
 		bytes += stringBytes(nickname);
@@ -426,7 +426,7 @@ class DeleteRequest extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 4;
 		bytes += 4;
 		bytes += 1 * userId.length;
@@ -458,7 +458,7 @@ class DeleteResponse extends PackMeMessage {
 	
 	@override
 	int estimate() {
-		flags.clear();
+		reset();
 		int bytes = 5;
 		setFlag(error != null);
 		if (error != null) {
