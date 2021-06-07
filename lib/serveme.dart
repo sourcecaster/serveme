@@ -23,7 +23,7 @@ class ServeMe {
 	ServeMe({
 		String configFile = 'config.yaml',
 		Config Function(String filename)? configFactory,
-		Client Function(WebSocket)? clientFactory,
+		Client Function(WebSocket, HttpHeaders)? clientFactory,
 		Map<String, Module> modules = const <String, Module>{},
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
@@ -50,7 +50,7 @@ class ServeMe {
 	late final Scheduler _scheduler;
 	MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
-	final Client Function(WebSocket)? _clientFactory;
+	final Client Function(WebSocket, HttpHeaders)? _clientFactory;
 	final List<Client> _clients = <Client>[];
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 	ProcessSignal? _signalReceived;
@@ -126,7 +126,7 @@ class ServeMe {
 		if (httpServer != null) {
 			httpServer.listen((HttpRequest request) async {
 				final WebSocket socket = await WebSocketTransformer.upgrade(request);
-				final Client client = _clientFactory != null ? _clientFactory!(socket) : Client(socket);
+				final Client client = _clientFactory != null ? _clientFactory!(socket, request.headers) : Client(socket, request.headers);
 				_clients.add(client);
 				socket.listen((dynamic socket) {
 					if (socket is WebSocket) {

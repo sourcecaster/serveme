@@ -22,8 +22,8 @@ class MehConfig extends Config {
 /// functionality such as user authorization etc.
 
 class MehClient extends Client {
-	MehClient(WebSocket socket) : super(socket) {
-		//if (socket.)
+	MehClient(WebSocket socket, HttpHeaders headers) : super(socket, headers) {
+		userIsLocal = headers.host == '127.0.0.1';
 	}
 
 	late final bool userIsLocal;
@@ -74,7 +74,7 @@ class MehModule extends Module {
 				config.aliveNotification = line;
 				log('MehModule message is set to "$line"');
 			},
-			/// Using this regular expression to verify command line is correct.
+			/// Using regular expression for command line format verification.
 			validator: RegExp(r'^.*\S+.*$'), /// At least 1 printable character.
 			/// Message to be used to show command help.
 			usage: 'setMessage <message>',
@@ -84,7 +84,7 @@ class MehModule extends Module {
 			similar: <String>['set', 'message'],
 		);
 
-		log("MehModule is started. Apparently. Now let's spam them.");
+		log("MehModule is started. Apparently. Now let's spam them all.", MAGENTA);
 		scheduler.schedule(_webSocketSpam);
 	}
 
@@ -108,9 +108,9 @@ Future<void> main() async {
 		/// Main configuration file extended with our own custom data.
 		configFile: 'example/example.yaml',
 		/// Tell server to use our own Config class.
-		configFactory: (String filename) => MehConfig(filename),
+		configFactory: (_) => MehConfig(_),
 		/// Tell server to use our own Client class.
-		clientFactory: (WebSocket socket) => MehClient(socket),
+		clientFactory: (_, __) => MehClient(_, __),
 		/// Pass our modules to server (don't forget to enable them in config).
 		modules: <String, Module>{
 			'meh': MehModule()
