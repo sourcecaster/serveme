@@ -6,7 +6,7 @@
 				"id": ["uint8"],
 				"nickname": "string",
 				"?first_name": "string",
-				"?second_name": "string",
+				"?last_name": "string",
 				"?age": "uint8"
 			}]
 		}
@@ -22,7 +22,7 @@
 			"created": "datetime",
 			"info": {
 				"?first_name": "string",
-				"?second_name": "string",
+				"?last_name": "string",
 				"?male": "uint8",
 				"?age": "uint8",
 				"?birth_date": "datetime"

@@ -27,7 +27,7 @@ class GetAllResponseUser extends PackMeMessage {
 	late List<int> id;
 	late String nickname;
 	String? firstName;
-	String? secondName;
+	String? lastName;
 	int? age;
 	
 	@override
@@ -41,9 +41,9 @@ class GetAllResponseUser extends PackMeMessage {
 		if (firstName != null) {
 			bytes += stringBytes(firstName!);
 		}
-		setFlag(secondName != null);
-		if (secondName != null) {
-			bytes += stringBytes(secondName!);
+		setFlag(lastName != null);
+		if (lastName != null) {
+			bytes += stringBytes(lastName!);
 		}
 		setFlag(age != null);
 		if (age != null) {
@@ -59,7 +59,7 @@ class GetAllResponseUser extends PackMeMessage {
 		id.forEach(packUint8);
 		packString(nickname);
 		if (firstName != null) packString(firstName!);
-		if (secondName != null) packString(secondName!);
+		if (lastName != null) packString(lastName!);
 		if (age != null) packUint8(age!);
 	}
 	
@@ -76,7 +76,7 @@ class GetAllResponseUser extends PackMeMessage {
 			firstName = unpackString();
 		}
 		if (getFlag()) {
-			secondName = unpackString();
+			lastName = unpackString();
 		}
 		if (getFlag()) {
 			age = unpackUint8();
@@ -151,7 +151,7 @@ class GetRequest extends PackMeMessage {
 
 class GetResponseInfo extends PackMeMessage {
 	String? firstName;
-	String? secondName;
+	String? lastName;
 	int? male;
 	int? age;
 	DateTime? birthDate;
@@ -164,9 +164,9 @@ class GetResponseInfo extends PackMeMessage {
 		if (firstName != null) {
 			bytes += stringBytes(firstName!);
 		}
-		setFlag(secondName != null);
-		if (secondName != null) {
-			bytes += stringBytes(secondName!);
+		setFlag(lastName != null);
+		if (lastName != null) {
+			bytes += stringBytes(lastName!);
 		}
 		setFlag(male != null);
 		if (male != null) {
@@ -187,7 +187,7 @@ class GetResponseInfo extends PackMeMessage {
 	void pack() {
 		for (int i = 0; i < 1; i++) packUint8(flags[i]);
 		if (firstName != null) packString(firstName!);
-		if (secondName != null) packString(secondName!);
+		if (lastName != null) packString(lastName!);
 		if (male != null) packUint8(male!);
 		if (age != null) packUint8(age!);
 		if (birthDate != null) packDateTime(birthDate!);
@@ -200,7 +200,7 @@ class GetResponseInfo extends PackMeMessage {
 			firstName = unpackString();
 		}
 		if (getFlag()) {
-			secondName = unpackString();
+			lastName = unpackString();
 		}
 		if (getFlag()) {
 			male = unpackUint8();
@@ -369,6 +369,9 @@ class GetResponse extends PackMeMessage {
 		int bytes = 14;
 		bytes += stringBytes(email);
 		bytes += stringBytes(nickname);
+		bytes += info.estimate();
+		bytes += social.estimate();
+		bytes += stats.estimate();
 		setFlag(lastActive != null);
 		if (lastActive != null) {
 			bytes += lastActive!.estimate();
@@ -483,7 +486,7 @@ class DeleteResponse extends PackMeMessage {
 	
 }
 
-final Map<int, PackMeMessage Function()> messageFactory = <int, PackMeMessage Function()>{
+final Map<int, PackMeMessage Function()> exampleUsersMessageFactory = <int, PackMeMessage Function()>{
 	12982278: () => GetAllRequest(),
 	242206268: () => GetAllResponse(),
 	781905656: () => GetRequest(),

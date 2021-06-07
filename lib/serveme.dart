@@ -144,6 +144,10 @@ class ServeMe {
 		}
 	}
 
+	void register(Map<int, PackMeMessage Function()> messageFactory) {
+		_packMe.register(messageFactory);
+	}
+
 	void broadcast(dynamic data, {bool Function(Client)? where}) {
 		if (data is! PackMeMessage && data is! Uint8List && data is! String) {
 			error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');

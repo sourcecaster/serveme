@@ -252,7 +252,7 @@ class Message {
 		code.add('		flags.clear();');
 		code.add('		int bytes = $bufferSize;');
 		for (final MessageField field in fields.values) {
-			if (field.optional || field.array || field.type == 'string') code.addAll(field.estimate);
+			if (field.optional || field.array || field.type == 'string' || field.type is Message) code.addAll(field.estimate);
 		}
 		code.add('		return bytes;');
 		code.add('	}');
@@ -321,7 +321,7 @@ void parseCommands(Map<String, dynamic> node, String prefix) {
 	}
 }
 
-void writeOutput(String outputFilename) {
+void writeOutput(String outputFilename, String prefix) {
 	final List<String> out = <String>[];
 	out.add("import 'dart:typed_data';");
 	out.add("import 'package:serveme/serveme.dart';");
@@ -329,7 +329,7 @@ void writeOutput(String outputFilename) {
 	for (final Message message in messages.values) {
 		out.addAll(message.output());
 	}
-	out.add('final Map<int, PackMeMessage Function()> messageFactory = <int, PackMeMessage Function()>{');
+	out.add('final Map<int, PackMeMessage Function()> ${validName(prefix)}MessageFactory = <int, PackMeMessage Function()>{');
 	for (final MapEntry<int, Message> entry in messages.entries) {
 		out.add('	${entry.key}: () => ${entry.value.name}(),');
 	}
@@ -369,7 +369,7 @@ void main(List<String> args) {
 			fatal('An error occurred while processing manifest: $err');
 		}
 		try {
-			writeOutput('$outPath/$name.generated.dart');
+			writeOutput('$outPath/$name.generated.dart', name);
 		}
 		catch (err) {
 			fatal('An error occurred while writing output file: $err');

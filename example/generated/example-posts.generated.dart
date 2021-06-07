@@ -73,6 +73,7 @@ class GetAllResponsePost extends PackMeMessage {
 		int bytes = 8;
 		bytes += 4;
 		bytes += 1 * id.length;
+		bytes += author.estimate();
 		bytes += stringBytes(title);
 		bytes += stringBytes(shortContent);
 		return bytes;
@@ -304,6 +305,7 @@ class GetResponseComment extends PackMeMessage {
 	int estimate() {
 		flags.clear();
 		int bytes = 8;
+		bytes += author.estimate();
 		bytes += stringBytes(comment);
 		return bytes;
 	}
@@ -338,6 +340,8 @@ class GetResponse extends PackMeMessage {
 		int bytes = 12;
 		bytes += stringBytes(title);
 		bytes += stringBytes(content);
+		bytes += author.estimate();
+		bytes += stats.estimate();
 		bytes += 4;
 		for (int i = 0; i < comments.length; i++) bytes += comments[i].estimate();
 		return bytes;
@@ -438,7 +442,7 @@ class DeleteResponse extends PackMeMessage {
 	
 }
 
-final Map<int, PackMeMessage Function()> messageFactory = <int, PackMeMessage Function()>{
+final Map<int, PackMeMessage Function()> examplePostsMessageFactory = <int, PackMeMessage Function()>{
 	63570112: () => GetAllRequest(),
 	280110613: () => GetAllResponse(),
 	187698222: () => GetRequest(),

@@ -56,7 +56,11 @@
 			ws.onmessage = (event) => {
 				let data = new Uint8Array(event.data);
 				console.log('Received buffer:', data);
-				console.log('Decoded as UTF8 string:', new TextDecoder().decode(data));
+				if (data[0] == 25 && data[1] == 169 && data[2] == 120 && data[3] == 240) {
+					console.log('It is a PackMe Message! Sending it back!');
+					ws.send(data);
+				}
+				else console.log('Decoded as UTF8 string:', new TextDecoder().decode(data));
 			}
 		}
 
