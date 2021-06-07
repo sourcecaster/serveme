@@ -131,6 +131,7 @@ class ServeMe {
 			httpServer.listen((HttpRequest request) async {
 				final WebSocket socket = await WebSocketTransformer.upgrade(request);
 				final Client client = _clientFactory != null ? _clientFactory!(socket, request.headers) : Client(socket, request.headers);
+				client._server = this;
 				_clients.add(client);
 				socket.listen((dynamic socket) {
 					if (socket is WebSocket) {
@@ -143,7 +144,11 @@ class ServeMe {
 		}
 	}
 
-	void broadcast(Uint8List data, {bool Function(Client)? where}) {
+	void broadcast(dynamic data, {bool Function(Client)? where}) {
+		if (data is! PackMeMessage && data is! Uint8List && data is! String) {
+			error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
+			return;
+		}
 		for (final Client client in _clients) {
 			if (where != null && !where(client)) continue;
 			client.send(data);
