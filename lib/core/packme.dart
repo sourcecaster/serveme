@@ -7,18 +7,23 @@ abstract class PackMeMessage {
 	int offset = 0;
 	Uint8List? data;
 	final List<int> flags = <int>[];
-	int _flagsCount = 0;
+	int _bitNumber = 0;
 
 	int estimate();
 	void pack();
 	void unpack();
 
-	void flag(bool on) {
-		if (flags.isEmpty) _flagsCount = 0;
-		_flagsCount++;
-		if ((_flagsCount / 8).ceil() > flags.length) flags.add(0);
-		flags.last <<= 1;
-		if (on) flags.last |= 1;
+	void setFlag(bool on) {
+		final int index = _bitNumber ~/ 8;
+		if (index >= flags.length) flags.add(0);
+		if (on) flags[index] |= 1 << (_bitNumber % 8);
+		_bitNumber++;
+	}
+	bool getFlag() {
+		final int index = _bitNumber ~/ 8;
+		final bool result = (flags[index] >> (_bitNumber % 8)) & 1 == 1;
+		_bitNumber++;
+		return result;
 	}
 
 	int stringBytes(String value) {
