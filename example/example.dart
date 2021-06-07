@@ -111,7 +111,7 @@ class MehModule extends Module {
 		/// For the sake of example let's add some custom console commands.
 		console.on('setMessage',
 			(String line, __) {
-				/// Don't. It is a bad practice to modify config like this.
+				/// Don't. It is a bad practice to modify config like this :)
 				config.aliveNotification = line;
 				log('MehModule message is set to "$line"');
 			},
@@ -137,7 +137,7 @@ class MehModule extends Module {
 		server.register(exampleUsersMessageFactory);
 
 		/// Now let's add console command which will broadcast some message.
-		console.on('sendPackedMessage', (String line, __) {
+		console.on('sendPackedMessage', (_, __) {
 			final GetResponse message = GetResponse()
 				..email = '${randomString()}@${randomString()}.com'
 				..nickname = 'Mr. ${randomString()}'
@@ -168,10 +168,14 @@ class MehModule extends Module {
 			log('Now waiting for echo response from client...', MAGENTA);
 		});
 
-		/// And finally we will start listening messages fom clients
+		/// And finally we will start listening messages from clients
 		events.listen(Event.connect, onConnectListener = (Map<String, dynamic> details) {
 			final Client client = details['client'] as Client;
-			client.listen<GetResponse>((dynamic data) => print(data));
+			/// listen to GetResponse message only
+			client.listen<GetResponse>((GetResponse data) {
+				log('Got response, decoded message:', MAGENTA);
+				messageToStrings(data).forEach(log);
+			});
 		});
 
 		log("MehModule is started. Apparently. Now let's spam them all.", MAGENTA);

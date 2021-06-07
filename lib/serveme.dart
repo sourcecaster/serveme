@@ -133,14 +133,17 @@ class ServeMe {
 				final Client client = _clientFactory != null ? _clientFactory!(socket, request.headers) : Client(socket, request.headers);
 				client._server = this;
 				_clients.add(client);
-				socket.listen((dynamic socket) {
-					if (socket is WebSocket) {
-						socket.listen(print);
-					}
-				});
 				_events.dispatch(Event.connect, <String, dynamic>{'client': client});
 			});
 			log('WebSocket server is running on: ${httpServer.address.address} port ${httpServer.port}');
+			console.on('clients',
+				(_, __) {
+					log('Currently ${_clients.length} clients are connected');
+				},
+				validator: RegExp(r'^$'),
+				usage: 'clients',
+				aliases: <String>['connections'],
+			);
 		}
 	}
 
@@ -149,14 +152,14 @@ class ServeMe {
 	}
 
 	void broadcast(dynamic data, {bool Function(Client)? where}) {
-		Uint8List? bytes;
-		if (data is PackMeMessage) bytes = _packMe.pack(data);
-		else if (data is Uint8List) bytes = data;
-		else if (data is String) bytes = const Utf8Encoder().convert(data);
-		else error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
+		if (data is PackMeMessage) data = _packMe.pack(data);
+		else if (data is! Uint8List && data is! String) {
+			error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
+			return;
+		}
 		for (final Client client in _clients) {
 			if (where != null && !where(client)) continue;
-			if (bytes != null) client.socket.add(bytes);
+			if (data != null) client.socket.add(data);
 		}
 	}
 

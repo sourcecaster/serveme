@@ -45,7 +45,7 @@
 	<script>
 		async function connect() {
 			console.log('Connecting to 127.0.0.1:8080...');
-			let ws = new WebSocket('ws://127.0.0.1:8080');
+			window.ws = new WebSocket('ws://127.0.0.1:8080');
 			ws.binaryType = 'arraybuffer';
 			ws.onopen = () => console.log('Connection established');
 			ws.onclose = () => console.log('Connection closed');
@@ -54,13 +54,13 @@
 				setTimeout(connect, 1000);
 			}
 			ws.onmessage = (event) => {
-				let data = new Uint8Array(event.data);
-				console.log('Received buffer:', data);
-				if (data[0] == 25 && data[1] == 169 && data[2] == 120 && data[3] == 240) {
+				if (typeof event.data == 'string') console.log('Received string:', event.data);
+				else {
+					let data = new Uint8Array(event.data);
+					console.log('Received buffer:', data);
 					console.log('It is a PackMe Message! Sending it back!');
 					ws.send(data);
 				}
-				else console.log('Decoded as UTF8 string:', new TextDecoder().decode(data));
 			}
 		}
 
