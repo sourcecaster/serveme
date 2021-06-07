@@ -14,6 +14,9 @@ class Logger {
 		catch (err) {
 			error('Unable to write error log file: $err');
 		}
+		errorsCountReduceTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+			if (errorsCount > 0) errorsCount -= min(errorsCount, 100);
+		});
 	}
 
 	static const String _reset = '\x1b[0m';
@@ -26,6 +29,8 @@ class Logger {
 	Future<void> _errorPromise = Future<void>.value(null);
 	RandomAccessFile? _debugFile;
 	RandomAccessFile? _errorFile;
+	late Timer errorsCountReduceTimer;
+	int errorsCount = 0;
 
 	Future<void> log(String message, [String color = _green]) async {
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
@@ -48,6 +53,14 @@ class Logger {
 	}
 
 	Future<void> error(String message, [StackTrace? stack]) async {
+		errorsCount++;
+		if (errorsCount >= 1000) {
+			if (errorsCount == 1000) {
+				message = 'Too many errors, error processing is suspended';
+				stack = null;
+			}
+			else return;
+		}
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
 		_server._events.dispatch(Event.error, <String, dynamic>{
 			'time': time,
@@ -70,6 +83,7 @@ class Logger {
 	}
 
 	Future<void> dispose() async {
+		errorsCountReduceTimer.cancel();
 		await Future.wait(<Future<void>>[_debugPromise, _errorPromise]);
 		if (_debugFile != null) _debugFile!.closeSync();
 		if (_errorFile != null) _errorFile!.closeSync();

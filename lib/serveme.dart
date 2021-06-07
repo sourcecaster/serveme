@@ -34,6 +34,7 @@ class ServeMe {
 		_logger = Logger(this);
 		_events = Events(this);
 		_scheduler = Scheduler(this);
+		_packMe = PackMe(this);
 		if (config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
@@ -50,6 +51,7 @@ class ServeMe {
 	late final Events _events;
 	late final Logger _logger;
 	late final Scheduler _scheduler;
+	late final PackMe _packMe;
 	MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
 	final Client Function(WebSocket, HttpHeaders)? _clientFactory;
