@@ -60,6 +60,7 @@ class ServeMe {
 	ProcessSignal? _signalReceived;
 	Timer? _signalTimer;
 
+	Module? operator [](String module) => _modules[module];
 	Future<Db> get db {
 		if (_mongo == null) throw Exception('MongoDB is not initialized');
 		return _mongo!.db;
