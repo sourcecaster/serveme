@@ -34,10 +34,7 @@ class Logger {
 
 	Future<void> log(String message, [String color = _green]) async {
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
-		_server._events.dispatch(Event.log, <String, dynamic>{
-			'time': time,
-			'message': message
-		});
+		_server._events.dispatch(LogEvent(message));
 		stdout.write(_clear);
 		print('$color${time.replaceFirst(RegExp('.* '), '')}: $message$_reset');
 		_server.console.update();
@@ -62,11 +59,7 @@ class Logger {
 			else return;
 		}
 		final String time = DateTime.now().toUtc().toString().replaceFirst(RegExp(r'\..*'), '');
-		_server._events.dispatch(Event.error, <String, dynamic>{
-			'time': time,
-			'message': message,
-			'stack': stack,
-		});
+		_server._events.dispatch(ErrorEvent(message, stack));
 		stdout.write(_clear);
 		print('$_red${time.replaceFirst(RegExp('.* '), '')}: $message$_reset');
 		_server.console.update();

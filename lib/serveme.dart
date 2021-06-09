@@ -134,7 +134,7 @@ class ServeMe {
 				final Client client = _clientFactory != null ? _clientFactory!(socket, request.headers) : Client(socket, request.headers);
 				client._server = this;
 				_clients.add(client);
-				_events.dispatch(Event.connect, <String, dynamic>{'client': client});
+				_events.dispatch(ConnectEvent(client));
 			});
 			log('WebSocket server is running on: ${httpServer.address.address} port ${httpServer.port}');
 			console.on('clients',
@@ -205,9 +205,7 @@ class ServeMe {
 
 	Future<void> _shutdown(ProcessSignal event, [int code = 100500]) async {
 		await log('Server stopped: $event');
-		await _events.dispatch(Event.stop, <String, dynamic>{
-			'code': code,
-		});
+		await _events.dispatch(StopEvent(event, code));
 		if (_unixSocketsAvailable && config._socket != null) {
 			final File socketFile = File(config._socket!);
 			if (socketFile.existsSync()) socketFile.deleteSync(recursive: true);

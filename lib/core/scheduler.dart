@@ -35,7 +35,7 @@ class Task {
 
 class Scheduler {
 	Scheduler(this._server) {
-		_server._events.listen(Event.tick, _process);
+		_server._events.listen<TickEvent>(_process);
 	}
 
 	final ServeMe _server;
@@ -50,7 +50,7 @@ class Scheduler {
 		_tasks.remove(task);
 	}
 
-	void _process(dynamic _) {
+	Future<void> _process(TickEvent _) async {
 		final DateTime now = DateTime.now().toUtc();
 		for (int i = _tasks.length - 1; i >= 0; i--) {
 			if (_tasks[i].check(now) && !_tasks[i].busy) _tasks[i].execute();
@@ -58,7 +58,7 @@ class Scheduler {
 	}
 
 	void dispose() {
-		_server._events.cancel(Event.tick, _process);
+		_server._events.cancel<TickEvent>(_process);
 	}
 }
 

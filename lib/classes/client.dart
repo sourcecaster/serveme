@@ -8,7 +8,7 @@ class Client {
 				if (message != null) data = message;
 			}
 			if (_handlers[data.runtimeType] != null) {
-				for (final Function handler in _handlers[data.runtimeType]!) handler(data);
+				for (final Function handler in _handlers[data.runtimeType]!) _processHandler(handler, data);
 			}
 		}, onDone: () {
 			_server._clients.remove(this);
@@ -20,6 +20,15 @@ class Client {
 	final WebSocket socket;
 	final HttpHeaders headers;
 
+	Future<void> _processHandler(Function handler, dynamic data) async {
+		try {
+			await handler(data);
+		}
+		catch (err, stack) {
+			_server._logger.error('WebSocket message handler execution error: $err', stack);
+		}
+	}
+
 	void send(dynamic data) {
 		if (data is PackMeMessage) data = _server._packMe.pack(data);
 		else if (data is! Uint8List && data is! String) {
@@ -29,12 +38,12 @@ class Client {
 		if (data != null) socket.add(data);
 	}
 
-	void listen<T>(Function(T) handler) {
+	void listen<T>(Future<void> Function(T) handler) {
 		if (_handlers[T] == null) _handlers[T] = <Function>[];
 		_handlers[T]!.add(handler);
 	}
 
-	void cancel<T>(Function(T) handler) {
+	void cancel<T>(Future<void> Function(T) handler) {
 		_handlers[T]?.remove(handler);
 	}
 }
