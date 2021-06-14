@@ -4,10 +4,12 @@
 /// Usage: dart compile.dart <sourceDirectory> <destinationDirectory>
 ///
 /// JSON Manifest file represents a set of commands, each command consists of
-/// two messages: request and response. In your server code you mostly listen
-/// for request messages from client and reply with response messages. However
-/// it totally depends on your architecture: server may as well send request
-/// messages and in some cases client may process those requests without reply.
+/// one (single message) or two (request and response) messages. In your server
+/// code you mostly listen for request messages from client and reply with
+/// response messages. However it totally depends on your architecture: server
+/// may as well send request messages and in some cases client may process those
+/// requests without reply. Though using single messages are preferred in such
+/// cases.
 ///
 /// The reason why each command is strictly divided on two messages (instead of
 /// just using raw messages) is to make manifest structure as clear as possible.
