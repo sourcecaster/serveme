@@ -5,7 +5,7 @@ class MongoDbConnection {
 
 	final Db _db;
 	final MongoConfig _config;
-	final ServeMe _server;
+	final ServeMe<ServeMeClient> _server;
 
 	Future<Db> get db async {
 		if (!_db.isConnected && _db.state != State.OPENING) {
@@ -23,7 +23,7 @@ class MongoDbConnection {
 		return _db;
 	}
 
-	static Future<MongoDbConnection> connect(MongoConfig config, ServeMe server) async {
+	static Future<MongoDbConnection> connect(MongoConfig config, ServeMe<ServeMeClient> server) async {
 		server.log('Connecting to MongoDB...');
 		final String connectionString =
 			'mongodb://'

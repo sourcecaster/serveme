@@ -38,7 +38,7 @@ class Scheduler {
 		_server._events.listen<TickEvent>(_process);
 	}
 
-	final ServeMe _server;
+	final ServeMe<ServeMeClient> _server;
 	final List<Task> _tasks = <Task>[];
 
 	void schedule(Task task) {

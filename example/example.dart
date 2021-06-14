@@ -62,7 +62,7 @@ class MehConfig extends Config {
 /// Implementing our own client class since we might want to add some custom
 /// functionality such as user authorization etc.
 
-class MehClient extends Client {
+class MehClient extends ServeMeClient {
 	MehClient(WebSocket socket, HttpHeaders headers) : super(socket, headers) {
 		userIsLocal = headers.host == '127.0.0.1';
 	}
@@ -77,7 +77,7 @@ class MehClient extends Client {
 class MehModule extends Module {
 	late Task _periodicShout;
 	late Task _webSocketSpam;
-	Future<void> Function(ConnectEvent)? onConnectListener;
+	Future<void> Function(ConnectEvent<MehClient>)? onConnectListener;
 
 	/// Since we're using custom Config class then we better override it a bit
 	/// just to make sure it returns MehConfig, not default Config.
@@ -172,7 +172,7 @@ class MehModule extends Module {
 		});
 
 		/// And finally we will start listening for messages from clients.
-		events.listen<ConnectEvent>(onConnectListener = (ConnectEvent event) async {
+		events.listen<ConnectEvent<MehClient>>(onConnectListener = (ConnectEvent<MehClient> event) async {
 			/// Listen to GetResponse message only.
 			event.client.listen<GetResponse>((GetResponse data) async {
 				log('Got response, decoded message:', MAGENTA);
@@ -194,7 +194,7 @@ class MehModule extends Module {
 
 	@override
 	Future<void> dispose() async {
-		if (onConnectListener != null) events.cancel<ConnectEvent>(onConnectListener!);
+		if (onConnectListener != null) events.cancel<ConnectEvent<MehClient>>(onConnectListener!);
 		scheduler.discard(_periodicShout);
 		scheduler.discard(_webSocketSpam);
 	}
@@ -205,7 +205,7 @@ class MehModule extends Module {
 /// false if initialization failed.
 
 Future<void> main() async {
-	final ServeMe server = ServeMe(
+	final ServeMe<MehClient> server = ServeMe<MehClient>(
 		/// Main configuration file extended with our own custom data.
 		configFile: 'example/example.yaml',
 		/// Tell server to use our own Config class.

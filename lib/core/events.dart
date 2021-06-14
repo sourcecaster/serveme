@@ -29,14 +29,14 @@ class ErrorEvent extends Event {
 	final StackTrace? stack;
 }
 
-class ConnectEvent extends Event {
+class ConnectEvent<C extends ConnectMeClient> extends Event {
 	ConnectEvent(this.client);
-	final Client client;
+	final C client;
 }
 
-class DisconnectEvent extends Event {
+class DisconnectEvent<C extends ConnectMeClient> extends Event {
 	DisconnectEvent(this.client);
-	final Client client;
+	final C client;
 }
 
 class Events {
@@ -48,7 +48,7 @@ class Events {
 	}
 
 	late final Timer _timer;
-	final ServeMe _server;
+	final ServeMe<ServeMeClient> _server;
 	final Map<Type, List<Function>> _eventHandlers = <Type, List<Function>>{};
 
 	void listen<T extends Event>(Future<void> Function(T) handler) {

@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:serveme/serveme.dart';
+import 'package:packme/packme.dart';
 
 class GetAllRequest extends PackMeMessage {
 	

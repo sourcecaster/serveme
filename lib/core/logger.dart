@@ -24,7 +24,7 @@ class Logger {
 	static const String _green = '\x1b[32m';
 	static const String _clear = '\x1b[999D\x1b[K';
 
-	final ServeMe _server;
+	final ServeMe<ServeMeClient> _server;
 	Future<void> _debugPromise = Future<void>.value(null);
 	Future<void> _errorPromise = Future<void>.value(null);
 	RandomAccessFile? _debugFile;

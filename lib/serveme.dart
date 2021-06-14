@@ -1,13 +1,12 @@
 library serveme;
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
+import 'package:connectme/connectme.dart';
 import 'package:mongo_dart/mongo_dart.dart' hide Type;
+import 'package:packme/packme.dart';
 import 'package:yaml/yaml.dart';
-part 'classes/client.dart';
 part 'classes/module.dart';
 part 'classes/config.dart';
 part 'core/console.dart';
@@ -15,17 +14,20 @@ part 'core/events.dart';
 part 'core/integrity.dart';
 part 'core/logger.dart';
 part 'core/mongo.dart';
-part 'core/packme.dart';
 part 'core/scheduler.dart';
 part 'core/utils.dart';
 
 final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
 
-class ServeMe {
+class ServeMeClient extends ConnectMeClient {
+	ServeMeClient(WebSocket socket, HttpHeaders headers) : super(socket, headers);
+}
+
+class ServeMe<C extends ServeMeClient> {
 	ServeMe({
 		String configFile = 'config.yaml',
 		Config Function(String filename)? configFactory,
-		Client Function(WebSocket, HttpHeaders)? clientFactory,
+		C Function(WebSocket, HttpHeaders)? clientFactory,
 		Map<String, Module> modules = const <String, Module>{},
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
@@ -34,7 +36,6 @@ class ServeMe {
 		_logger = Logger(this);
 		_events = Events(this);
 		_scheduler = Scheduler(this);
-		_packMe = PackMe(this);
 		if (config != null) {
 			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
 				if (!config.modules.contains(entry.key)) return false;
@@ -42,6 +43,17 @@ class ServeMe {
 				return true;
 			}));
 		}
+		final InternetAddress address = _unixSocketsAvailable && config._socket != null
+			? InternetAddress(config._socket!, type: InternetAddressType.unix)
+			: InternetAddress('127.0.0.1', type: InternetAddressType.IPv4);
+		_cmServer = ConnectMe.server(address,
+			port: config._port ?? 0,
+			clientFactory: _clientFactory,
+			onLog: log,
+			onError: error,
+			onConnect: (C client) => _events.dispatch(ConnectEvent<C>(client)),
+			onDisconnect: (C client) => _events.dispatch(DisconnectEvent<C>(client))
+		);
 	}
 
 	bool _running = false;
@@ -51,11 +63,10 @@ class ServeMe {
 	late final Events _events;
 	late final Logger _logger;
 	late final Scheduler _scheduler;
-	late final PackMe _packMe;
+	late final ConnectMeServer<C> _cmServer;
 	MongoDbConnection? _mongo;
 	final Map<String, Module> _modules = <String, Module>{};
-	final Client Function(WebSocket, HttpHeaders)? _clientFactory;
-	final List<Client> _clients = <Client>[];
+	final C Function(WebSocket, HttpHeaders)? _clientFactory;
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 	ProcessSignal? _signalReceived;
 	Timer? _signalTimer;
@@ -111,57 +122,30 @@ class ServeMe {
 	Future<void> _disposeModules() async {
 		for (final String name in _modules.keys) {
 			if (_modules[name]!._state == ModuleState.none) continue;
-			await _modules[name]!.dispose();
+			try {
+				await _modules[name]!.dispose();
+			}
+			catch(err, stack) {
+				error('An error has occurred while disposing module "$name": $err', stack);
+			}
 			_modules[name]!._state = ModuleState.disposed;
 		}
 	}
 
-	Future<void> _initWebSocketServer() async {
-		HttpServer? httpServer;
-		if (_unixSocketsAvailable && config._socket != null) {
-			log('Starting WebSocket server using unix named socket...');
-			final File socketFile = File(config._socket!);
-			if (socketFile.existsSync()) socketFile.deleteSync(recursive: true);
-			httpServer = await HttpServer.bind(InternetAddress(config._socket!, type: InternetAddressType.unix), 0);
-		}
-		else if (config._port != null) {
-			log('Starting WebSocket server using local IP address...');
-			httpServer = await HttpServer.bind(InternetAddress('127.0.0.1', type: InternetAddressType.IPv4), config._port!);
-		}
-		if (httpServer != null) {
-			httpServer.listen((HttpRequest request) async {
-				final WebSocket socket = await WebSocketTransformer.upgrade(request);
-				final Client client = _clientFactory != null ? _clientFactory!(socket, request.headers) : Client(socket, request.headers);
-				client._server = this;
-				_clients.add(client);
-				_events.dispatch(ConnectEvent(client));
-			});
-			log('WebSocket server is running on: ${httpServer.address.address} port ${httpServer.port}');
-			console.on('clients',
-				(_, __) {
-					log('Currently ${_clients.length} clients are connected');
-				},
-				validator: RegExp(r'^$'),
-				usage: 'clients',
-				aliases: <String>['connections'],
-			);
-		}
-	}
-
 	void register(Map<int, PackMeMessage Function()> messageFactory) {
-		_packMe.register(messageFactory);
+		_cmServer.register(messageFactory);
 	}
 
-	void broadcast(dynamic data, {bool Function(Client)? where}) {
-		if (data is PackMeMessage) data = _packMe.pack(data);
-		else if (data is! Uint8List && data is! String) {
-			error('Unsupported data type for ServeMe.broadcast, only PackMeMessage, Uint8List and String are supported');
-			return;
-		}
-		for (final Client client in _clients) {
-			if (where != null && !where(client)) continue;
-			if (data != null) client.socket.add(data);
-		}
+	void broadcast(dynamic data, {bool Function(C)? where}) {
+		_cmServer.broadcast(data, where: where);
+	}
+
+	void listen<T>(Future<void> Function(T, C) handler) {
+		_cmServer.listen<T>(handler);
+	}
+
+	void cancel<T>(Future<void> Function(T, C) handler) {
+		_cmServer.cancel<T>(handler);
 	}
 
 	Future<bool> run() async {
@@ -188,7 +172,7 @@ class ServeMe {
 					await _initMongoDB();
 					await _initModules();
 					_runModules();
-					await _initWebSocketServer();
+					await _cmServer.serve();
 				}
 				catch (err, stack) {
 					await error('Server initialization failed: $err', stack);
@@ -214,9 +198,10 @@ class ServeMe {
 			listener.cancel();
 		}
 		_processSignalListeners.clear();
+		await _cmServer.close();
+		await _disposeModules();
 		_scheduler.dispose();
 		_events.dispose();
-		await _disposeModules();
 		if (_mongo != null) await _mongo!.close();
 		await console.dispose();
 		await _logger.dispose();

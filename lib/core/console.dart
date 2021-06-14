@@ -15,7 +15,7 @@ class Console {
 		_listener = stdin.listen(_key);
 	}
 
-	final ServeMe _server;
+	final ServeMe<ServeMeClient> _server;
 	late final StreamSubscription<List<int>> _listener;
 	final Map<String, CommandHandler> handlers = <String, CommandHandler>{};
 	final Map<String, String> similar = <String, String>{};

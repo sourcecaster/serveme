@@ -46,7 +46,7 @@ class CollectionDescriptor {
 	}
 }
 
-Future<void> _checkCollections(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkCollections(ServeMe<ServeMeClient> server, Map<String, CollectionDescriptor> collections) async {
 	final List<String?> names = await (await server.db).getCollectionNames();
 	for (final String name in collections.keys) {
 		if (names.contains(name)) continue;
@@ -56,7 +56,7 @@ Future<void> _checkCollections(ServeMe server, Map<String, CollectionDescriptor>
 	}
 }
 
-Future<void> _checkIndexes(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkIndexes(ServeMe<ServeMeClient> server, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.indexes.isEmpty) continue;
@@ -76,7 +76,7 @@ Future<void> _checkIndexes(ServeMe server, Map<String, CollectionDescriptor> col
 	}
 }
 
-Future<void> _checkData(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkData(ServeMe<ServeMeClient> server, Map<String, CollectionDescriptor> collections) async {
 	for (final String name in collections.keys) {
 		final CollectionDescriptor collection = collections[name]!;
 		if (collection.documents.isEmpty) continue;
@@ -91,7 +91,7 @@ Future<void> _checkData(ServeMe server, Map<String, CollectionDescriptor> collec
 	}
 }
 
-Future<void> _checkMongoIntegrity(ServeMe server, Map<String, CollectionDescriptor> collections) async {
+Future<void> _checkMongoIntegrity(ServeMe<ServeMeClient> server, Map<String, CollectionDescriptor> collections) async {
 	server.log('Checking database integrity...');
 	await _checkCollections(server, collections);
 	await _checkIndexes(server, collections);
