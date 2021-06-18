@@ -74,7 +74,7 @@ class MehClient extends ServeMeClient {
 /// Implementing our main example module. Note that in order to make server run
 /// this module it must be enabled in configuration file.
 
-class MehModule extends Module {
+class MehModule extends Module<MehClient> {
 	late Task _periodicShout;
 	late Task _webSocketSpam;
 	Future<void> Function(ConnectEvent<MehClient>)? onConnectListener;
@@ -213,7 +213,7 @@ Future<void> main() async {
 		/// Tell server to use our own Client class.
 		clientFactory: (_, __) => MehClient(_, __),
 		/// Pass our modules to server (don't forget to enable them in config).
-		modules: <String, Module>{
+		modules: <String, Module<MehClient>>{
 			'meh': MehModule()
 		},
 	);

@@ -7,8 +7,8 @@ enum ModuleState {
 	disposed,
 }
 
-abstract class Module {
-	late ServeMe server;
+abstract class Module<C extends ServeMeClient> {
+	late ServeMe<C> server;
 
 	ModuleState _state = ModuleState.none;
 
@@ -16,7 +16,7 @@ abstract class Module {
 	Events get events => server._events;
 	Scheduler get scheduler => server._scheduler;
 	Console get console => server.console;
-	Map<String, Module> get modules => server._modules;
+	Map<String, Module<C>> get modules => server._modules;
 	Future<Db> get db {
 		if (server._mongo == null) throw Exception('MongoDB is not initialized');
 		return server._mongo!.db;

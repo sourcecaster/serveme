@@ -7,6 +7,7 @@ import 'package:connectme/connectme.dart';
 import 'package:mongo_dart/mongo_dart.dart' hide Type;
 import 'package:packme/packme.dart';
 import 'package:yaml/yaml.dart';
+
 part 'classes/module.dart';
 part 'classes/config.dart';
 part 'core/console.dart';
@@ -28,7 +29,7 @@ class ServeMe<C extends ServeMeClient> {
 		String configFile = 'config.yaml',
 		Config Function(String filename)? configFactory,
 		C Function(WebSocket, HttpHeaders)? clientFactory,
-		Map<String, Module> modules = const <String, Module>{},
+		Map<String, Module<C>>? modules,
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
 	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);
@@ -36,8 +37,8 @@ class ServeMe<C extends ServeMeClient> {
 		_logger = Logger(this);
 		_events = Events(this);
 		_scheduler = Scheduler(this);
-		if (config != null) {
-			_modules.addEntries(modules.entries.where((MapEntry<String, Module> entry) {
+		if (config != null && modules != null) {
+			_modules.addEntries(modules.entries.where((MapEntry<String, Module<C>> entry) {
 				if (!config.modules.contains(entry.key)) return false;
 				entry.value.server = this;
 				return true;
@@ -65,13 +66,13 @@ class ServeMe<C extends ServeMeClient> {
 	late final Scheduler _scheduler;
 	late final ConnectMeServer<C> _cmServer;
 	MongoDbConnection? _mongo;
-	final Map<String, Module> _modules = <String, Module>{};
+	final Map<String, Module<C>> _modules = <String, Module<C>>{};
 	final C Function(WebSocket, HttpHeaders)? _clientFactory;
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 	ProcessSignal? _signalReceived;
 	Timer? _signalTimer;
 
-	Module? operator [](String module) => _modules[module];
+	Module<C>? operator [](String module) => _modules[module];
 	Future<Db> get db {
 		if (_mongo == null) throw Exception('MongoDB is not initialized');
 		return _mongo!.db;
