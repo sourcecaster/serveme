@@ -3,7 +3,7 @@ description: Framework for console server applications
 version: 0.0.1
 
 environment:
-  sdk: ">=2.12.0 <3.0.0"
+  sdk: ">=2.13.0 <3.0.0"
 
 dependencies:
   mongo_dart: ^0.7.0+2

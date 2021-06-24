@@ -18,11 +18,9 @@ part 'core/mongo.dart';
 part 'core/scheduler.dart';
 part 'core/utils.dart';
 
-final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
+typedef ServeMeClient = ConnectMeClient;
 
-class ServeMeClient extends ConnectMeClient {
-	ServeMeClient(WebSocket socket, HttpHeaders headers) : super(socket, headers);
-}
+final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
 
 class ServeMe<C extends ServeMeClient> {
 	ServeMe({
