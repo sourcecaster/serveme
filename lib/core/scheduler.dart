@@ -3,7 +3,7 @@ part of serveme;
 class Task {
 	Task(this.time, this.handler, {this.period, this.skip = false});
 
-	late final Scheduler _scheduler;
+	late Scheduler _scheduler;
 	DateTime time;
 	final Future<void> Function(DateTime time) handler;
 	final Duration? period;
