@@ -44,7 +44,7 @@ class ServeMe<C extends ServeMeClient> {
 		}
 		final InternetAddress address = _unixSocketsAvailable && config._socket != null
 			? InternetAddress(config._socket!, type: InternetAddressType.unix)
-			: InternetAddress('127.0.0.1', type: InternetAddressType.IPv4);
+			: InternetAddress(config._host ?? '127.0.0.1', type: InternetAddressType.IPv4);
 		_cmServer = ConnectMe.server(address,
 			port: config._port ?? 0,
 			clientFactory: _clientFactory,

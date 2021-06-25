@@ -33,6 +33,7 @@ class Config {
 	YamlMap? _map = YamlMap();
 	MongoConfig? _mongo;
 	String? _socket;
+	String? _host;
 	int? _port;
 	bool _debug = false;
 	String _debugLog = 'debug.log';
@@ -58,6 +59,7 @@ class Config {
 				);
 			}
 			config._socket = cast<String?>(config.map['socket']);
+			config._host = cast<String?>(config.map['host']);
 			config._port = cast<int?>(config.map['port']);
 			config._debug = cast<bool>(config.map['debug'], fallback: false);
 			config._debugLog = cast<String>(config.map['debug_log'], fallback: 'debug.log');
