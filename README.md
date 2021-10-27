@@ -1,5 +1,5 @@
 ## What is ServeMe
-ServeMe is a simple and powerful modular server framework. It allows to easily create backend servers for both mobile and web applications. Here are some of the features provided by ServeMe framework:
+ServeMe is a simple and powerful modular server framework. It allows to easily create backend services for both mobile and web applications. Here are some of the features provided by ServeMe framework:
 * modular architecture allows to easily implement separate parts of the server using ServeMe Modular API;
 * events API allows to dispatch and listen to any built-in or custom events in your application;
 * scheduler API allows to create different tasks and schedule its' execution time and period;
@@ -22,7 +22,6 @@ Future<void> main() async {
     await server.run();
 }
 ```
-
 You should provide config.yaml (configuration file by default) in order to start the server.
 ```yaml
 port: 8080
@@ -30,9 +29,7 @@ debug: true
 debug_log: debug.log
 error_log: error.log
 ```
-
 It's ready to run! Though it does nothing at this point. Now we need to implement at least one Module file where something will actually happen. It's recommended to keep your project file structure clean and put all your module files in a separate "modules" directory.
-
 Let's create some module which will listen for String messages from connected clients and echo them back:
 ```dart
 class MyModule extends Module<ServeMeClient> {
@@ -57,17 +54,15 @@ class MyModule extends Module<ServeMeClient> {
     }
 }
 ```
-
 Now we have a module but we also need to enable it in our configuration file:
 ```yaml
 modules:
     - mymodule
 ```
-
 Let's update our main function:
 ```dart
 Future<void> main() async {
-    final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
+     final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
         modules: <String, Module<ServeMeClient>>{
             'mymodule': MyModule(),
         },
@@ -75,7 +70,6 @@ Future<void> main() async {
     await server.run();
 }
 ```
-
 And it's ready! You can now connect to the server using your browser and test it out:
 ```javascript
 let ws = new WebSocket('ws:// 127.0.0.1:8080');
@@ -89,14 +83,15 @@ By default ServeMe uses config.yaml file and ServeMeConfig class for instantiati
 class MyConfig extends Config {
     MyConfig(String filename) : super(filename) {
         optionalNumber = cast<int?>(map['optional'], fallback: null);
-        greetingMessage = cast<String>(map['greeting'], errorMessage: 'Failed to load config: greeting message is not set');
+        greetingMessage = cast<String>(map['greeting'], 
+            errorMessage: 'Failed to load config: greeting message is not set'
+        );
     }
   
     late final int? optionalNumber;
     late final String greetingMessage;
 }
 ```
-
 Method cast<T>() allows to easily cast dynamic variable into typed one with specified fallback value or exception error message. Now let's update our configuration file and see hot to use custom configuration class instead of default one.
 ```yaml
 port: 8080
@@ -110,7 +105,6 @@ greeting: Welcome, friend!
 modules:
   - mymodule
 ```
-
 ```dart
 Future<void> main() async {
     final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
@@ -123,7 +117,6 @@ Future<void> main() async {
     await server.run();
 }
 ```
-
 Here's how to access custom config from the module:
 ```dart
 class MyModule extends Module<ServeMeClient> {
@@ -133,7 +126,48 @@ class MyModule extends Module<ServeMeClient> {
     MyConfig get config => super.config as MyConfig;  
   
     void printConfig() {
-        log('MyConfig parameters: optionalNumber = ${config.optionalNumber}, greetingMessage = ${config.greetingMessage}');  
+        log('optionalNumber: ${config.optionalNumber}, greetingMessage: ${config.greetingMessage}');  
+    }
+    
+    // ...
+}
+```
+
+## Generic client class type
+You probably already noticed that both classes ServeMe and Module have generic client class (<ServeMeClient> by default). It's used in some server properties and methods and it is possible to implement custom client class. Here's an example: 
+```dart
+import 'dart:io';
+
+class MyClient extends ServeMeClient {
+    MyClient(WebSocket socket, HttpHeaders headers) : super(socket, headers) {
+        authToken = headers.value('x-auth-token');
+    }
+
+    late final String? authToken;
+}
+```
+We've added some custom property authToken and in order to use this class instead of default it's necessary to set clientFactory property in ServeMe constructor:
+```dart
+Future<void> main() async {
+    final ServeMe<MyClient> server = ServeMe<MyClient>(
+        clientFactory: (_, __) => MyClient(_, __),
+        modules: <String, Module<MyClient>>{
+           'mymodule': MyModule(),
+        },
+    );
+    await server.run();
+}
+```
+Keep in mind that in this case all modules should be declared with the same generic class type.
+```dart
+class MyModule extends Module<MyClient> {
+    // ...
+    
+    void echoAuthenticatedClients() {
+        server.listen<String>((String message, MyClient client) async {
+            if (client.authToken != 'some-valid-token') return;
+            clent.send(message);
+        });      
     }
     
     // ...
@@ -142,9 +176,94 @@ class MyModule extends Module<ServeMeClient> {
 
 ## Modules
 
+Every module has three mandatory methods: init(), run() and dispose(). 
+```dart
+Future<void> init();
+```
+Asynchronous method init() is invoked on server start and usually used to preload all necessary data for module to be ready to run.   
+```dart
+void run();
+```
+Method run() is invoked after all modules have been successfully initialized. It's where modules start processing things and do its' job.
+```dart
+Future<void> dispose();
+```
+Asynchronous method dispose() is used on server shutdown to finish modules operation properly (when it's necessary). 
+
 ## Logs and errors
+Every ServeMe module has access to three methods: log(), debug() and error().
+```dart
+Future<void> log(String message, [String color = _green]);
+```
+Method log() writes message to console and saves it to debug.log file (specified in configuration file).
+```dart
+Future<void> debug(String message, [String color = _reset]);
+```
+If debug is enabled in config then debug() writes message to console and saves it to log file.
+```dart
+Future<void> error(String message, [StackTrace? stack]);
+```
+Method error() logs error to console and writes it to error.log file (specified in configuration file).
+
+## Console commands
+By default there is a single command you can use in server console: stop - which shuts down the server. However it is possible to implement any other commands using console object accessible from modules:
+```dart
+void run() {
+    console.on('echo', (String line, List<String> args) async => log(line),
+        aliases: <String>['say'], // optional
+        similar: <String>['repeat', 'tell', 'speak'], // optional
+        usage: 'echo <string>\nEchoes specified string (max 20 characters length)', // optional
+        validator: RegExp(r'^.{1,20}$'), // optional
+    );
+}
+```
+This code will add echo command which allows to echo specified string no longer that 20 characters length.
+* String line - command arguments string (without command itself);
+* List<String> args - list of arguments
+* aliases - use it if you need to assign multiple commands to the same command handler;
+* similar - list of commands which won't be recognized as valid but a suggestion of original command will be displayed;
+* usage - command format hint and/or short description which will be displayed if command format is invalid or command is used with --help key (or -h, -?, /?);
+* validator - regular expression for arguments string validation.
 
 ## Events
+ServeMe supports some built-in events:
+* ReadyEvent - dispatched once all modules are initialized, right before invoking modules run() methods;
+* TickEvent - dispatched every second;
+* StopEvent - dispatched once server shutdown initiated (either by stop command or POSIX signal);
+* LogEvent - dispatched on every message logging event;
+* ErrorEvent - dispatched on errors;
+* ConnectEvent - dispatched when incoming client connection established;
+* DisconnectEvent - dispatched when client connection is closed;
+You can subscribe to events using events object accessible from modules:
+```dart
+void run() {
+    events.listen<TickEvent>((TickEvent event) async {
+      log('${event.counter} seconds passed since server start');
+    });
+}
+```
+It is also possible to implement own events and dispatch them when necessary. It's often very useful for interaction between different modules.
+```dart
+class AnnouncementEvent extends Event {
+  AnnouncementEvent(this.message) : super();
+
+  final String message;
+}
+```
+Now you can dispatch AnnouncementEvent in one module and listen for it in another module.
+```dart
+// implemented in some module
+void makeAnnouncement() {
+    events.dispatch(AnnouncementEvent('Cheese for everyone!'));
+}
+
+// implemented in some another module
+void run() {
+    events.listen<AnnouncementEvent>((AnnouncementEvent event) async {
+        server.broadcast(event.message); // sends data to all connected clients
+    });
+}
+```
 
 ## Scheduler
 

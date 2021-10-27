@@ -170,6 +170,7 @@ class ServeMe<C extends ServeMeClient> {
 					);
 					await _initMongoDB();
 					await _initModules();
+					_events.dispatch(ReadyEvent());
 					_runModules();
 					await _cmServer.serve();
 				}
@@ -187,7 +188,7 @@ class ServeMe<C extends ServeMeClient> {
 	}
 
 	Future<void> _shutdown(ProcessSignal event, [int code = 100500]) async {
-		await log('Server stopped: $event');
+		await log('Server shutdown initiated: $event');
 		await _events.dispatch(StopEvent(event, code));
 		if (_unixSocketsAvailable && config._socket != null) {
 			final File socketFile = File(config._socket!);
@@ -202,6 +203,7 @@ class ServeMe<C extends ServeMeClient> {
 		_scheduler.dispose();
 		_events.dispose();
 		if (_mongo != null) await _mongo!.close();
+		await log('Server stopped');
 		await console.dispose();
 		await _logger.dispose();
 		exit(code);
