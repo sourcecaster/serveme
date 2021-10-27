@@ -1,5 +1,7 @@
 part of serveme;
 
+final Stream<List<int>> stdinStream = stdin.asBroadcastStream();
+
 class CommandHandler {
 	CommandHandler({required this.function, this.validator, this.usage});
 
@@ -12,7 +14,7 @@ class Console {
 	Console(this._server) {
 		stdin.echoMode = false;
 		stdin.lineMode = false;
-		_listener = stdin.listen(_key);
+		_listener = stdinStream.listen(_key);
 	}
 
 	final ServeMe<ServeMeClient> _server;

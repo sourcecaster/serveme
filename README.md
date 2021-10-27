@@ -495,4 +495,4 @@ Future<void> main() async {
 It's available for Dart only. Currently there are no plans to implement it for any other language. However if developers will find this package useful then it may be implemented for Node.JS and C++ in the future.
 
 ## P.S.
-I really hope you enjoy it ;)
+I hope you enjoy it ;)

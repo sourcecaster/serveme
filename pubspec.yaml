@@ -12,3 +12,5 @@ dependencies:
   yaml: ^3.1.0
   connectme: ^1.1.1
   packme: ^1.1.5
+dev_dependencies:
+  test: ^1.17.11

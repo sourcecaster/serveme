@@ -1,0 +1,10 @@
+{
+	"test": [
+		{
+			"request_param": "double"
+		},
+		{
+			"response_param": "double"
+		}
+	]
+}

@@ -188,6 +188,10 @@ class ServeMe<C extends ServeMeClient> {
 		return _running;
 	}
 
+	Future<void> stop() async {
+		await _shutdown(ProcessSignal.sigquit, 100500);
+	}
+
 	Future<void> _shutdown(ProcessSignal event, [int code = 100500]) async {
 		await log('Server shutdown initiated: $event');
 		await _events.dispatch(StopEvent(event, code));
@@ -207,6 +211,6 @@ class ServeMe<C extends ServeMeClient> {
 		await log('Server stopped');
 		await console.dispose();
 		await _logger.dispose();
-		exit(code);
+		if (code != 100500) exit(code);
 	}
 }
