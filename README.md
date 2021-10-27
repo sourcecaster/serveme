@@ -77,6 +77,20 @@ let ws = new WebSocket('ws:// 127.0.0.1:8080');
 ws.onmessage = console.log;
 ws.send('Something');
 ```
+It's possible to access one module from another via [] operator applied to server object:
+```dart
+class AnotherModule extends Module<ServeMeClient> {
+    MyModule get myModule => server['mymodule']! as MyModule;
+
+    @override
+    Future<void> init() async {
+        log('Here is our main module: $myModule');
+    }
+    
+    // ...
+}
+```
+And don't forget to enable your newly implemented modules in configuration file. 
 
 ## Configuration files
 By default ServeMe uses config.yaml file and ServeMeConfig class for instantiating config object accessible from any module. However it is possible to implement and use custom configuration class.
@@ -209,6 +223,7 @@ Method error() logs error to console and writes it to error.log file (specified 
 ## Console commands
 By default there is a single command you can use in server console: stop - which shuts down the server. However it is possible to implement any other commands using console object accessible from modules:
 ```dart
+@override
 void run() {
     console.on('echo', (String line, List<String> args) async => log(line),
         aliases: <String>['say'], // optional
@@ -238,6 +253,7 @@ ServeMe supports some built-in events:
 
 You can subscribe to events using events object accessible from modules:
 ```dart
+@override
 void run() {
     events.listen<TickEvent>((TickEvent event) async {
         log('${event.counter} seconds passed since server start');
@@ -260,6 +276,7 @@ void makeAnnouncement() {
 }
 
 // implemented in some another module
+@override
 void run() {
     events.listen<AnnouncementEvent>((AnnouncementEvent event) async {
         server.broadcast(event.message); // sends data to all connected clients
@@ -300,7 +317,109 @@ This module creates periodic Task which will be started in 1 minute. Note that t
 * skip - if true then periodic task will be skipped till next time if previously returned Future is not resolved yet. Default value: false.
 
 ## Connections and data transfer
+You can access all of your current client connections via clients object implemented in Module class:
+```dart
+@override
+void run() {
+    for (final ServeMeClient in server.clients) {
+        // do something, don't use it for broadcasting however, use server.broadcast() instead
+    }
+}
+```
+It's always recommended to use [PackMe](https://pub.dev/packages/packme) messages for data exchange since it gives some important benefits such as clear communication protocol described in JSON, asynchronous queries support out of the box and small data packets size.
+Here's a simple protocol.json file (located in packme directory) for some hypothetical client-server application (see PackMe JSON manifest format documentation [here](https://pub.dev/packages/packme)):
+```json
+{
+    "get_user": [
+        {
+            "id": "string"
+        },
+        {
+            "first_name": "string",
+            "last_name": "string",
+            "age": "uint8"
+        }
+    ]
+}
+```
+Generate dart files:
+```bash
+# Usage: dart run packme <json_manifests_dir> <generated_classes_dir>
+dart run packme packme generated
+```
+Before listening for any PackMe message from clients it is necessary to register message factory (which is created automatically and declared in generated dart file).
+```dart
+@override
+void run() {
+    // necessary for ServeMe to know how to parse incoming binary data
+    server.register(protocolMessageFactory);
+    server.listen<GetUserRequest>((GetUserRequest request, ServeMeClient client) {
+        // GetUserRequest.$response method returns GetUserResponse associated with current request.
+        final GetUserResponse response = request.$response(
+            firstName: 'Alyx',
+            lastName: 'Vance',
+            age: 19,
+        );
+    });
+}
+```
+This code listens for GetUserRequest message from clients and replies with GetUserResponse message. However sometimes it is useful to be able to add message listeners for some specific clients only, for example, logged in users only:
+```dart
+bool _isAuthorizedToDoSomething(String codePhrase) {
+    return codePhrase == "I am Iron Man.";
+}
 
+@override
+void run() {
+    // Listen for some authorization request from connected clients.
+    server.listen<AuthorizeRequest>((AuthorizeRequest request, ServeMeClient client) {
+        if (_isAuthorizedToDoSomething(request.codePhrase)) {
+            client.listen<GodModeRequest>(_handleGodModeRequest);
+            client.listen<AllWeaponsRequest>(_handleAllWeaponsRequest);
+            client.listen<KillEveryoneRequest>(_handleKillEveryoneRequest);
+            client.send(request.$response(
+                allowed: true,
+                reason: 'Welcome on board!',
+            ));
+        }
+        else {
+            client.send(request.$response(
+                allowed: false,
+                reason: 'You are not Iron Man.',
+            ));
+            // Close client connection.
+            client.close();
+        }
+    });
+}
+```
+You could see in previous examples that request.$response() method is used instead of just instantiating corresponding ResponseMessage. It's made for assigning the response to this particular request which allows us to use .query() on client side (or server side, it doesn't matter once implementation is valid on the opposite side):
+```dart
+// let's for example obtain some data from clients once server is going offline
+@override
+Future<void> dispose() async {
+    int ok = 0, notOk = 0;
+    for (final ServeMeClient client in server.clients) {
+        // in real life situation you probably want to use asynchronous calls in parallel
+        final AreYouOkResponse response = await client.query<AreYouOkResponse>(AreYouOkRequest());
+        if (response.ok) ok++;
+        else notOk++;
+    }
+    server.log('$ok clients are OK and $notOk clients are not. Now ready for shutting down.');
+}
+```
+Method broadcast() allows to send a message to all connected clients or to some clients filtered by some criteria:
+```dart
+// say good bye to all clients on server shut down
+@override
+Future<void> dispose() async {
+    // Send a String message to all connected clients.
+    server.broadcast(
+        'See you later!', 
+        (ServeMeClient client) => true // optional criteria filter
+    );
+}
+```
 
 ## MongoDB
 ServeMe uses [mongo_dart](https://pub.dev/packages/mongo_dart) package for MongoDB support. In order to use MongoDB in modules it's necessary to specify mongo config section of your configuration file:
@@ -322,9 +441,11 @@ mongo:
 There's an object db accessible from modules. This object is actually Future<Db>. Future is used to ensure that connection to database is alive and Db object is valid.
 ```dart
 import 'package:mongo_dart/mongo_dart.dart';
-
+```
+```dart
 late final List<Map<String, dynamic>> items;
 
+@override
 Future<void> init() async {
     // load all items within price range specified in config file
     items = await (await db).collection('users')
@@ -343,7 +464,7 @@ Future<void> main() async {
                 indexes: <String, IndexDescriptor>{
                     'login_unique': IndexDescriptor(key: <String, int>{'login': 1}, unique: true),
                     'email_unique': IndexDescriptor(key: <String, int>{'email': 1}, unique: true),
-                    'session_key_unique': IndexDescriptor(key: <String, int>{'sessions.key': 1}, unique: true),
+                    'session': IndexDescriptor(key: <String, int>{'sessions.key': 1}, unique: true),
                 }
             ),
             'settings': CollectionDescriptor(

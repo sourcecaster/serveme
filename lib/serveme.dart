@@ -70,6 +70,7 @@ class ServeMe<C extends ServeMeClient> {
 	ProcessSignal? _signalReceived;
 	Timer? _signalTimer;
 
+	List<C> get clients => _cmServer.clients;
 	Module<C>? operator [](String module) => _modules[module];
 	Future<Db> get db {
 		if (_mongo == null) throw Exception('MongoDB is not initialized');
