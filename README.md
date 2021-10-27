@@ -233,7 +233,8 @@ ServeMe supports some built-in events:
 * LogEvent - dispatched on every message logging event;
 * ErrorEvent - dispatched on errors;
 * ConnectEvent - dispatched when incoming client connection established;
-* DisconnectEvent - dispatched when client connection is closed;
+* DisconnectEvent - dispatched when client connection is closed.
+
 You can subscribe to events using events object accessible from modules:
 ```dart
 void run() {
