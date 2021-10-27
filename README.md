@@ -1,6 +1,7 @@
 ## What is ServeMe
 ServeMe is a simple and powerful modular server framework. It allows to easily create backend services for both mobile and web applications. Here are some of the features provided by ServeMe framework:
 * modular architecture allows to easily implement separate parts of the server using ServeMe Modular API;
+* MongoDB support out of the box, automatic database integrity validation for easy server deployment;
 * events API allows to dispatch and listen to any built-in or custom events in your application;
 * scheduler API allows to create different tasks and schedule its' execution time and period;
 * logging, debug and error handling tools; 
@@ -62,7 +63,7 @@ modules:
 Let's update our main function:
 ```dart
 Future<void> main() async {
-     final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
+    final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
         modules: <String, Module<ServeMeClient>>{
             'mymodule': MyModule(),
         },
@@ -300,4 +301,77 @@ This module creates periodic Task which will be started in 1 minute. Note that t
 
 ## Connections and data transfer
 
+
 ## MongoDB
+ServeMe uses [mongo_dart](https://pub.dev/packages/mongo_dart) package for MongoDB support. In order to use MongoDB in modules it's necessary to specify mongo config section of your configuration file:
+```yaml
+mongo:
+    host: 127.0.0.1
+    database: test_db
+```
+Or in case of using replica set:
+```yaml
+mongo:
+    host: 
+        - 192.160.1.101:27017
+        - 192.160.1.102:27017
+        - 192.160.1.103:27017
+    database: test_db
+    replica: myReplicaSet
+```
+There's an object db accessible from modules. This object is actually Future<Db>. Future is used to ensure that connection to database is alive and Db object is valid.
+```dart
+import 'package:mongo_dart/mongo_dart.dart';
+
+late final List<Map<String, dynamic>> items;
+
+Future<void> init() async {
+    // load all items within price range specified in config file
+    items = await (await db).collection('users')
+        .find(where.gte('price', config.minPrice).lte('price', config.maxPrice))
+        .toList();
+}
+```
+
+## Database integrity validation
+Sometimes it's necessary to ensure that server database contains all necessary collections, indexes and data for server to work properly. For this purpose ServeMe provides special integrity descriptor. It allows you to automatically create missing indexes and create mandatory documents in database on server start. Aside from validation it also allows to deploy servers with ease without extra steps for setting up database.
+```dart
+Future<void> main() async {
+    final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
+        dbIntegrityDescriptor: <String, CollectionDescriptor>{
+            'users': CollectionDescriptor(
+                indexes: <String, IndexDescriptor>{
+                    'login_unique': IndexDescriptor(key: <String, int>{'login': 1}, unique: true),
+                    'email_unique': IndexDescriptor(key: <String, int>{'email': 1}, unique: true),
+                    'session_key_unique': IndexDescriptor(key: <String, int>{'sessions.key': 1}, unique: true),
+                }
+            ),
+            'settings': CollectionDescriptor(
+                indexes: <String, IndexDescriptor>{
+                    'param_unique': IndexDescriptor(key: <String, int>{'param': 1}, unique: true),
+                },
+                documents: <Map<String, dynamic>>[
+                    <String, dynamic>{
+                        'param': 'online_users_limit',
+                        'value': 5000,
+                    },
+                    <String, dynamic>{
+                        'param': 'disable_email_login',
+                        'value': false,
+                    },
+                ]
+            ),
+        },
+        modules: <String, Module<ServeMeClient>>{
+            'mymodule': MyModule(),
+        },
+    );
+    await server.run();
+}
+```
+
+## Supported platforms
+It's available for Dart only. Currently there are no plans to implement it for any other language. However if developers will find this package useful then it may be implemented for Node.JS and C++ in the future.
+
+## P.S.
+I really hope you enjoy it ;)
