@@ -40,7 +40,7 @@ class MyModule extends Module<ServeMeClient> {
     }
   
     @override
-    Future<void> run() async {
+    void run() {
         server.listen<String>((String message, ServeMeClient client) async {
             log('Got a message: $message');
             client.send(message);
@@ -267,6 +267,36 @@ void run() {
 ```
 
 ## Scheduler
+ServeMe allows to create and schedule tasks. There's a scheduler object accessible from modules:
+```dart
+class SomeModule extends Module<ServeMeClient> {
+    late final Task task;
+    
+    @override
+    Future<void> init() async {
+        task = Task(
+            DateTime.now()..add(const Duration(minutes: 1)),
+                (DateTime time) async {
+                log('Current time is $time');
+            },
+            period: const Duration(seconds: 10), // optional
+            skip: false, // optional
+        );
+    }
+
+    @override
+    void run() {
+        scheduler.schedule(task);
+    }
+
+    @override
+    Future<void> dispose() async {
+        scheduler.cancel(task);
+    }
+}
+```
+This module creates periodic Task which will be started in 1 minute. Note that task is cancelled on dispose.
+* skip - if true then periodic task will be skipped till next time if previously returned Future is not resolved yet. Default value: false.
 
 ## Connections and data transfer
 
