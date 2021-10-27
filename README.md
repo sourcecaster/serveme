@@ -239,7 +239,7 @@ You can subscribe to events using events object accessible from modules:
 ```dart
 void run() {
     events.listen<TickEvent>((TickEvent event) async {
-      log('${event.counter} seconds passed since server start');
+        log('${event.counter} seconds passed since server start');
     });
 }
 ```
