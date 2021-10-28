@@ -107,7 +107,7 @@ class MyConfig extends Config {
     late final String greetingMessage;
 }
 ```
-Method cast<T>() allows to easily cast dynamic variable into typed one with specified fallback value or exception error message. Now let's update our configuration file and see hot to use custom configuration class instead of default one.
+Method cast&lt;T&gt;() allows to easily cast dynamic variable into typed one with specified fallback value or exception error message. Now let's update our configuration file and see hot to use custom configuration class instead of default one.
 ```yaml
 port: 8080
 debug: true
@@ -149,7 +149,7 @@ class MyModule extends Module<ServeMeClient> {
 ```
 
 ## Generic client class type
-You probably already noticed that both classes ServeMe and Module have generic client class (<ServeMeClient> by default). It's used in some server properties and methods and it is possible to implement custom client class. Here's an example: 
+You probably already noticed that both classes ServeMe and Module have generic client class (&lt;ServeMeClient&gt; by default). It's used in some server properties and methods and it is possible to implement custom client class. Here's an example: 
 ```dart
 import 'dart:io';
 
@@ -235,7 +235,7 @@ void run() {
 ```
 This code will add echo command which allows to echo specified string no longer that 20 characters length.
 * String line - command arguments string (without command itself);
-* List<String> args - list of arguments
+* List&lt;String&gt; args - list of arguments
 * aliases - use it if you need to assign multiple commands to the same command handler;
 * similar - list of commands which won't be recognized as valid but a suggestion of original command will be displayed;
 * usage - command format hint and/or short description which will be displayed if command format is invalid or command is used with --help key (or -h, -?, /?);
@@ -438,7 +438,7 @@ mongo:
     database: test_db
     replica: myReplicaSet
 ```
-There's an object db accessible from modules. This object is actually Future<Db>. Future is used to ensure that connection to database is alive and Db object is valid.
+There's an object db accessible from modules. This object is actually Future&lt;Db&gt;. Future is used to ensure that connection to database is alive and Db object is valid.
 ```dart
 import 'package:mongo_dart/mongo_dart.dart';
 ```
