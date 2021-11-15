@@ -112,17 +112,25 @@ class Console {
 		else if (input[0] == 5) previous();
 		else if (input[0] == 24) next();
 		else if (input[0] == 27) {
-			if (input[1] == 91) {
-				if (input[2] == 68) if (pos > 0) pos--;
-				if (input[2] == 67) if (pos < line.length) pos++;
-				if (input[2] == 49) pos = 0;
-				if (input[2] == 52) pos = line.length;
-				if (input[2] == 51) {
-					if (pos < line.length) line = line.replaceRange(pos, pos + 1, '');
-					search = null;
+			if (input.length > 1) {
+				if (input[1] == 91 && input.length > 2) {
+					if (input[2] == 68) if (pos > 0) pos--;
+					if (input[2] == 67) if (pos < line.length) pos++;
+					if (input[2] == 49) pos = 0;
+					if (input[2] == 52) pos = line.length;
+					if (input[2] == 51) {
+						if (pos < line.length) line = line.replaceRange(pos, pos + 1, '');
+						search = null;
+					}
+					if (input[2] == 65) previous();
+					if (input[2] == 66) next();
 				}
-				if (input[2] == 65) previous();
-				if (input[2] == 66) next();
+			}
+			else {
+				line = '';
+				pos = 0;
+				row = history.length - 1;
+				search = null;
 			}
 		}
 		else if (input[0] == 8 || input[0] == 127) {
