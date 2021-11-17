@@ -1,6 +1,7 @@
 ## What is ServeMe
 ServeMe is a simple and powerful modular server framework. It allows to easily create backend services for both mobile and web applications. Here are some of the features provided by ServeMe framework:
 * modular architecture allows to easily implement separate parts of the server using ServeMe Modular API;
+* both WebSockets and TCP sockets are supported (TCP sockets support implemented in v1.1.0);
 * MongoDB support out of the box, automatic database integrity validation for easy server deployment;
 * events API allows to dispatch and listen to any built-in or custom events in your application;
 * scheduler API allows to create different tasks and schedule its' execution time and period;
@@ -92,6 +93,21 @@ class AnotherModule extends Module<ServeMeClient> {
 ```
 And don't forget to enable your newly implemented modules in configuration file. 
 
+## WebSockets and TCP sockets
+ServeMe is using WebSockets by default. However it can handle pure TCP sockets as well:
+```dart
+Future<void> main() async {
+    final ServeMe<ServeMeClient> server = ServeMe<ServeMeClient>(
+        type: ServeMeType.tcp,
+        modules: <String, Module<ServeMeClient>>{
+            'mymodule': MyModule(),
+        },
+    );
+    await server.run();
+}
+```
+Keep in mind that String messages you will try to send via TCP sockets will be converted to Uint8List. So in order to receive String via TCP socket you need to use listen<Uint8List>() instead of listen<String>(). 
+
 ## Configuration files
 By default ServeMe uses config.yaml file and ServeMeConfig class for instantiating config object accessible from any module. However it is possible to implement and use custom configuration class.
 ```dart
@@ -154,8 +170,8 @@ You probably already noticed that both classes ServeMe and Module have generic c
 import 'dart:io';
 
 class MyClient extends ServeMeClient {
-    MyClient(WebSocket socket, HttpHeaders headers) : super(socket, headers) {
-        authToken = headers.value('x-auth-token');
+    MyClient(ServeMeSocket socket) : super(socket) {
+        authToken = socket.httpRequest!.headers.value('x-auth-token');
     }
 
     late final String? authToken;

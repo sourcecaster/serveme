@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' show Random;
 import 'package:serveme/serveme.dart';
 
@@ -63,8 +62,8 @@ class MehConfig extends Config {
 /// functionality such as user authorization etc.
 
 class MehClient extends ServeMeClient {
-	MehClient(WebSocket socket, HttpHeaders headers) : super(socket, headers) {
-		userIsLocal = headers.host == '127.0.0.1';
+	MehClient(ServeMeSocket socket) : super(socket) {
+		userIsLocal = socket.httpRequest!.headers.host == '127.0.0.1';
 	}
 
 	late final bool userIsLocal;
@@ -211,7 +210,7 @@ Future<void> main() async {
 		/// Tell server to use our own Config class.
 		configFactory: (_) => MehConfig(_),
 		/// Tell server to use our own Client class.
-		clientFactory: (_, __) => MehClient(_, __),
+		clientFactory: (_) => MehClient(_),
 		/// Pass our modules to server (don't forget to enable them in config).
 		modules: <String, Module<MehClient>>{
 			'meh': MehModule()

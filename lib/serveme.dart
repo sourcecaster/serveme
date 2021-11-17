@@ -19,17 +19,20 @@ part 'core/scheduler.dart';
 part 'core/utils.dart';
 
 typedef ServeMeClient = ConnectMeClient;
+typedef ServeMeSocket = ConnectMeSocket;
+typedef ServeMeType = ConnectMeType;
 
 final bool _unixSocketsAvailable = Platform.isLinux || Platform.isAndroid || Platform.isMacOS;
 
 class ServeMe<C extends ServeMeClient> {
 	ServeMe({
 		String configFile = 'config.yaml',
+		ServeMeType type = ServeMeType.ws,
 		Config Function(String filename)? configFactory,
-		C Function(WebSocket, HttpHeaders)? clientFactory,
+		C Function(ServeMeSocket)? clientFactory,
 		Map<String, Module<C>>? modules,
 		Map<String, CollectionDescriptor>? dbIntegrityDescriptor,
-	}) : _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
+	}) : _type = type, _clientFactory = clientFactory, _dbIntegrityDescriptor = dbIntegrityDescriptor {
 		config = Config._instantiate(configFile, factory: configFactory);
 		console = Console(this);
 		_logger = Logger(this);
@@ -47,6 +50,7 @@ class ServeMe<C extends ServeMeClient> {
 			: InternetAddress(config._host ?? '127.0.0.1', type: InternetAddressType.IPv4);
 		_cmServer = ConnectMe.server(address,
 			port: config._port ?? 0,
+			type: _type,
 			clientFactory: _clientFactory,
 			onLog: log,
 			onError: error,
@@ -63,9 +67,10 @@ class ServeMe<C extends ServeMeClient> {
 	late final Logger _logger;
 	late final Scheduler _scheduler;
 	late final ConnectMeServer<C> _cmServer;
+	final ServeMeType _type;
 	MongoDbConnection? _mongo;
 	final Map<String, Module<C>> _modules = <String, Module<C>>{};
-	final C Function(WebSocket, HttpHeaders)? _clientFactory;
+	final C Function(ServeMeSocket)? _clientFactory;
 	final Map<String, CollectionDescriptor>? _dbIntegrityDescriptor;
 	ProcessSignal? _signalReceived;
 	Timer? _signalTimer;
@@ -146,6 +151,25 @@ class ServeMe<C extends ServeMeClient> {
 
 	void cancel<T>(Future<void> Function(T, C) handler) {
 		_cmServer.cancel<T>(handler);
+	}
+
+	Future<ServeMeClient> connect(dynamic address, {
+		Map<String, dynamic> headers = const <String, dynamic>{},
+		int port = 0,
+		bool autoReconnect = true,
+		int queryTimeout = 30,
+		Function()? onConnect,
+		Function()? onDisconnect,
+	}) {
+		return ConnectMe.connect(address,
+			port: port,
+			autoReconnect: autoReconnect,
+			queryTimeout: queryTimeout,
+			onLog: log,
+			onError: error,
+			onConnect: onConnect,
+			onDisconnect: onDisconnect,
+		);
 	}
 
 	Future<bool> run() async {
