@@ -164,6 +164,29 @@ class MyModule extends Module<ServeMeClient> {
 }
 ```
 
+## Establishing client connection to remote server
+ServeMe instance allows you to create client connection to a remote WebSocket or TCP server.
+```dart
+@override
+Future<void> init() async {
+    // Establish WebSocket connection to localhost
+    final ServeMeClient wsConnectionClient = await server.connect(
+        'ws://127.0.0.1:8080',
+        onConnect: () => log('WebSocket connection established'),
+        onDisconnect: () => log('Disconnected from WebSocket server'),
+    );
+    
+    // Establish TCP socket connection to localhost
+    final ServeMeClient tcpConnectionClient = await server.connect(
+        InternetAddress('127.0.0.1', type: InternetAddressType.IPv4),
+        port: 8177,
+        onConnect: () => log('TCP connection established'),
+        onDisconnect: () => log('Disconnected from TCP server'),
+    );
+}
+```
+Since server.connect() method returns an instance of ServeMeClient, all features such as sending/receiving PackMe messages and using asynchronous queries are available.
+
 ## Generic client class type
 You probably already noticed that both classes ServeMe and Module have generic client class (&lt;ServeMeClient&gt; by default). It's used in some server properties and methods and it is possible to implement custom client class. Here's an example: 
 ```dart
