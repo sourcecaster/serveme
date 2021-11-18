@@ -1,3 +1,7 @@
+## v1.1.1
+* Maximum data length increased to 2^63 for messages sent over TCP socket.
+* Bugfix: data messages sent over TCP socket could stall in some cases.
+
 ## v1.1.0
 * TCP sockets support implemented (breaking changes).
 * ServeMeClient constructor now takes single ServeMeSocket argument.
