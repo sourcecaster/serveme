@@ -164,7 +164,7 @@ class MyModule extends Module<ServeMeClient> {
 }
 ```
 
-## Establishing client connection to remote server
+## Establishing client connection to a remote server
 ServeMe instance allows you to create client connection to a remote WebSocket or TCP server.
 ```dart
 @override
