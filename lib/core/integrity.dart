@@ -70,8 +70,20 @@ Future<void> _checkIndexes(ServeMe<ServeMeClient> server, Map<String, Collection
 				server.error('Name "$indexName" is used by another index: MANUAL FIX REQUIRED');
 				continue;
 			}
-			await (await server.db).collection(name).createIndex(name: indexName, keys: index.key, unique: index.unique, sparse: index.sparse);
-			server.log('Index "$indexName" is created');
+			// creteIndex doesn't support expireAfterSeconds, so we do it long way
+			// await (await server.db).collection(name).createIndex(name: indexName, keys: index.key, unique: index.unique, sparse: index.sparse);
+			final Db db = await server.db;
+			final DbCollection dbCollection = db.collection(name);
+			final CreateIndexOptions indexOptions = CreateIndexOptions(dbCollection,
+				uniqueIndex: index.unique,
+				sparseIndex: index.sparse,
+				indexName: indexName
+			);
+			final Map<String, Object>? rawOptions = index.expireAfterSeconds != null ? <String, Object>{'expireAfterSeconds': index.expireAfterSeconds!} : null;
+			final CreateIndexOperation indexOperation = CreateIndexOperation(db, dbCollection, index.key, indexOptions, rawOptions: rawOptions);
+			final Map<String, Object?> result = await indexOperation.execute();
+			if (result['ok'] == 1.0) server.log('Index "$indexName" is created');
+			else server.error('Unable to create index "$indexName": ${result['errmsg']}');
 		}
 	}
 }

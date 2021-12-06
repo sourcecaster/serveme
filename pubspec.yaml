@@ -1,6 +1,6 @@
 name: serveme
 description: Backend server framework designed for a quick development of modular WebSocket based server applications with MongoDB integration.
-version: 1.1.1
+version: 1.1.2
 homepage: https://github.com/sourcecaster/serveme
 repository: https://github.com/sourcecaster/serveme
 issue_tracker: https://github.com/sourcecaster/serveme/issues

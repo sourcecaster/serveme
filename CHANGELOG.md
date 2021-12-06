@@ -1,3 +1,6 @@
+## v1.1.2
+* Bugfix: expireAfterSeconds option for IndexDescriptor of CollectionDescriptor was ignored.
+
 ## v1.1.1
 * Maximum data length increased to 2^63 for messages sent over TCP socket.
 * Bugfix: data messages sent over TCP socket could stall in some cases.
@@ -8,7 +11,7 @@
 * Future<ServeMeClient> ServeMe.connect() method added allowing to create WebSocket or TCP client connections (with the same functionality as server client connections).
 
 ## v1.0.2
-* Bugfix: ESC key press caused ServeMe to crash on Linux
+* Bugfix: ESC key press caused ServeMe to crash on Linux.
 
 ## v1.0.1
 * Small fixes in ReadMe file.
