@@ -1,3 +1,6 @@
+## v1.1.3
+* Bugfix: concurrent modifications during iteration occurred in some cases while processing events.
+
 ## v1.1.2
 * Bugfix: expireAfterSeconds option for IndexDescriptor of CollectionDescriptor was ignored.
 

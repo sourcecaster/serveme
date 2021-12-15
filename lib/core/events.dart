@@ -60,18 +60,23 @@ class Events {
 		_eventHandlers[T]?.remove(handler);
 	}
 
+	Future<void> _tryExecute(Function handler, Event event) async {
+		try {
+			await handler(event);
+		}
+		catch (err, stack) {
+			_server._logger.error('Event handler execution error: $err', stack);
+		}
+	}
+
 	Future<void> dispatch(Event event) async {
-		if (event is! Event) throw Exception('$event is not an Event class instance');
+		final List<Future<void>> futures = <Future<void>>[];
 		if (_eventHandlers[event.runtimeType] != null) {
 			for (final Function handler in _eventHandlers[event.runtimeType]!) {
-				try {
-					await handler(event);
-				}
-				catch (err, stack) {
-					_server._logger.error('Event handler execution error: $err', stack);
-				}
+				futures.add(_tryExecute(handler, event));
 			}
 		}
+		await Future.wait(futures);
 	}
 
 	void dispose() {
