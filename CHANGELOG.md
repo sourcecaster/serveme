@@ -1,3 +1,7 @@
+## v1.2.0
+* Added support for binary type (uses Uint8List). Format: binary12, binary64 etc. - any buffer length in bytes.
+* Example file is up to date now. (Message constructors require non-optional parameters).
+
 ## v1.1.3
 * Bugfix: concurrent modifications during iteration occurred in some cases while processing events.
 

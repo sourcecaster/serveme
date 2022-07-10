@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:packme/packme.dart';
 
 class TestResponse extends PackMeMessage {

@@ -140,30 +140,30 @@ class MehModule extends Module<MehClient> {
 		console.on('sendPackedMessage', (_, __) {
 			/// GetResponse is just the name of response message of command Get.
 			/// It's declared in example-users.generated.dart.
-			final GetResponse message = GetResponse()
-				..email = '${randomString()}@${randomString()}.com'
-				..nickname = 'Mr. ${randomString()}'
-				..hidden = false
-				..created = DateTime.now()
-				..info = (GetResponseInfo()
-					..firstName = randomString()
-					..lastName = randomString()
-					..age = randomInt()
-				)
-				..social = (GetResponseSocial()
-					..facebookId = randomInt() < 128 ? 'fbID_${randomString()}' : null
-					..twitterId = randomInt() < 128 ? 'twID_${randomString()}' : null
-					..instagramId = randomInt() < 128 ? 'inID_${randomString()}' : null
-				)
-				..stats = (GetResponseStats()
-					..posts = randomInt()
-					..comments = randomInt()
-					..likes = randomInt() * 10
-					..dislikes = randomInt()
-					..rating = randomInt() / 25.5
-
-				)
-				..sessions = <GetResponseSession>[];
+			final GetResponse message = GetResponse(
+				email: '${randomString()}@${randomString()}.com',
+				nickname: 'Mr. ${randomString()}',
+				hidden: false,
+				created: DateTime.now(),
+				info: GetResponseInfo(
+					firstName: randomString(),
+					lastName: randomString(),
+					age: randomInt(),
+				),
+				social: GetResponseSocial(
+					facebookId: randomInt() < 128 ? 'fbID_${randomString()}' : null,
+					twitterId: randomInt() < 128 ? 'twID_${randomString()}' : null,
+					instagramId: randomInt() < 128 ? 'inID_${randomString()}' : null,
+				),
+				stats: GetResponseStats(
+					posts: randomInt(),
+					comments: randomInt(),
+					likes: randomInt() * 10,
+					dislikes: randomInt(),
+					rating: randomInt() / 25.5,
+				),
+				sessions: <GetResponseSession>[],
+			);
 			server.broadcast(message);
 			log('Here is the message I sent:', MAGENTA);
 			messageToStrings(message).forEach(log);
