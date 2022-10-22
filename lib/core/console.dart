@@ -42,6 +42,7 @@ class Console {
 	}
 
 	void process(String line) {
+		// TODO: Exceptions are not handled as "UNHANDLED" for some reason. Need to figure that out.
 		line = line.trim();
 		if (line.isEmpty) return;
 		_server.log('> $line', YELLOW);
