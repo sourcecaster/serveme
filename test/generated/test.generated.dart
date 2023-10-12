@@ -1,38 +1,4 @@
-import 'dart:typed_data';
 import 'package:packme/packme.dart';
-
-class TestResponse extends PackMeMessage {
-	TestResponse({
-		required this.responseParam,
-	});
-	TestResponse.$empty();
-
-	late double responseParam;
-	
-	@override
-	int $estimate() {
-		$reset();
-		int bytes = 16;
-		return bytes;
-	}
-
-	@override
-	void $pack() {
-		$initPack(216725115);
-		$packDouble(responseParam);
-	}
-
-	@override
-	void $unpack() {
-		$initUnpack();
-		responseParam = $unpackDouble();
-	}
-
-	@override
-	String toString() {
-		return 'TestResponse\x1b[0m(responseParam: ${PackMe.dye(responseParam)})';
-	}
-}
 
 class TestRequest extends PackMeMessage {
 	TestRequest({
@@ -41,7 +7,7 @@ class TestRequest extends PackMeMessage {
 	TestRequest.$empty();
 
 	late double requestParam;
-	
+
 	TestResponse $response({
 		required double responseParam,
 	}) {
@@ -53,8 +19,7 @@ class TestRequest extends PackMeMessage {
 	@override
 	int $estimate() {
 		$reset();
-		int bytes = 16;
-		return bytes;
+		return 16;
 	}
 
 	@override
@@ -75,7 +40,39 @@ class TestRequest extends PackMeMessage {
 	}
 }
 
+class TestResponse extends PackMeMessage {
+	TestResponse({
+		required this.responseParam,
+	});
+	TestResponse.$empty();
+
+	late double responseParam;
+
+	@override
+	int $estimate() {
+		$reset();
+		return 16;
+	}
+
+	@override
+	void $pack() {
+		$initPack(216725115);
+		$packDouble(responseParam);
+	}
+
+	@override
+	void $unpack() {
+		$initUnpack();
+		responseParam = $unpackDouble();
+	}
+
+	@override
+	String toString() {
+		return 'TestResponse\x1b[0m(responseParam: ${PackMe.dye(responseParam)})';
+	}
+}
+
 final Map<int, PackMeMessage Function()> testMessageFactory = <int, PackMeMessage Function()>{
-	216725115: () => TestResponse.$empty(),
 	764832169: () => TestRequest.$empty(),
+	216725115: () => TestResponse.$empty(),
 };

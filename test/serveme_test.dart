@@ -51,6 +51,7 @@ void main() {
             );
             await server.run();
             client = await ConnectMe.connect('ws://127.0.0.1:31337');
+            await Future<void>.delayed(const Duration(milliseconds: 100));
         });
 
         tearDown(() async {
@@ -128,6 +129,7 @@ void main() {
             );
             await server.run();
             client = await ConnectMe.connect('127.0.0.1', port: 31337);
+            await Future<void>.delayed(const Duration(milliseconds: 100));
         });
 
         tearDown(() async {
