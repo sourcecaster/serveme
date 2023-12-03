@@ -1,3 +1,6 @@
+## v1.2.2
+* HTTP server type added. Method server.on(route, handler) added for HTTP routes implementation.
+
 ## v1.2.1
 * PackMe upgraded to v2.0.1: object inheritance implemented, nested arrays support added.
 * IMPORTANT: PackMe objects and enumerations from other JSON files are now referenced using filename: "some_user": "@filename:user". No changes required for references within the same file.

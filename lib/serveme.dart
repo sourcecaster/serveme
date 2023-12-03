@@ -145,6 +145,10 @@ class ServeMe<C extends ServeMeClient> {
 		_cmServer.broadcast(data, where: where);
 	}
 
+	void on(String route, Function(HttpRequest request) handler) {
+		_cmServer.on(route, handler);
+	}
+
 	void listen<T>(Future<void> Function(T, C) handler) {
 		_cmServer.listen<T>(handler);
 	}
